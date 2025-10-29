@@ -8,50 +8,62 @@ class AddOrderkuotaFieldsToTransactions extends Migration
 {
     public function up()
     {
-        // Tambahkan kolom setelah kolom Tripay yang sudah ada atau setelah snap_token
+        // Definisikan field yang akan ditambahkan
         $fieldsToAdd = [
-            'zeppelin_reference_id' => [ // Nama sudah benar
+            'zeppelin_reference_id' => [
                 'type'       => 'VARCHAR',
-                'constraint' => 100, // Sesuaikan constraint jika perlu
+                'constraint' => 100,
                 'null'       => true,
-                'after'      => 'tripay_raw', // Letakkan setelah kolom Tripay terakhir
+                // Hapus 'after' => 'tripay_raw' agar tidak bergantung pada kolom sebelumnya
+                // Posisi default adalah di akhir tabel jika 'after' tidak ditentukan
             ],
-            'zeppelin_paid_amount' => [ // Nama sudah benar
+            'zeppelin_paid_amount' => [
                 'type'       => 'DECIMAL',
-                'constraint' => '15,0', // Jumlah yang harus dibayar (bisa beda karena biaya unik)
+                'constraint' => '15,0',
                 'null'       => true,
-                'after'      => 'zeppelin_reference_id',
+                'after'      => 'zeppelin_reference_id', // Bergantung pada kolom yang baru ditambahkan di migrasi ini
             ],
-            'zeppelin_qr_url' => [ // Nama sudah benar
-                'type' => 'TEXT', // URL gambar QRIS
+            'zeppelin_qr_url' => [
+                'type' => 'TEXT',
                 'null' => true,
-                'after' => 'zeppelin_paid_amount',
+                'after' => 'zeppelin_paid_amount', // Bergantung pada kolom yang baru ditambahkan di migrasi ini
             ],
-            'zeppelin_expiry_date' => [ // Nama sudah benar (sebelumnya expiry_str)
-                'type' => 'DATETIME', // Waktu kedaluwarsa dari API (sudah diparse)
+            'zeppelin_expiry_date' => [
+                'type' => 'DATETIME',
                 'null' => true,
-                'after' => 'zeppelin_qr_url',
+                'after' => 'zeppelin_qr_url', // Bergantung pada kolom yang baru ditambahkan di migrasi ini
             ],
-            'zeppelin_raw_response' => [ // Nama sudah benar (sebelumnya raw)
-                'type' => 'TEXT', // Simpan response JSON mentah
+            'zeppelin_raw_response' => [
+                'type' => 'TEXT',
                 'null' => true,
-                'after' => 'zeppelin_expiry_date',
+                'after' => 'zeppelin_expiry_date', // Bergantung pada kolom yang baru ditambahkan di migrasi ini
             ],
         ];
-        $this->forge->addColumn('transactions', $fieldsToAdd);
+
+        // Cek apakah tabel ada sebelum menambahkan kolom
+        if ($this->db->tableExists('transactions')) {
+            // Coba tambahkan kolom
+            try {
+                $this->forge->addColumn('transactions', $fieldsToAdd);
+            } catch (\Throwable $e) {
+                 log_message('error', 'Gagal menambahkan kolom Orderkuota: ' . $e->getMessage());
+                 // Jika perlu, Anda bisa melempar exception lagi atau menangani error
+                 // throw $e;
+            }
+        } else {
+             log_message('error', 'Tabel "transactions" tidak ditemukan saat mencoba menambahkan kolom Orderkuota.');
+        }
 
 
         // Ganti enum payment_gateway untuk menambahkan 'orderkuota'
-        // Perhatian: Mengubah ENUM bisa berisiko di beberapa DB atau memerlukan syntax khusus.
-        // Alternatifnya adalah menggunakan VARCHAR. Jika tetap ENUM:
-        // Syntax ini mungkin perlu disesuaikan tergantung driver database Anda (MySQL, PostgreSQL, dll.)
+        // Gunakan try-catch untuk menangani potensi error saat mengubah ENUM
         try {
-             // MySQL Syntax - Pastikan semua enum yang ada disertakan
+             // Pastikan semua nilai enum yang sudah ada (midtrans, tripay) disertakan
              $this->db->query("ALTER TABLE transactions MODIFY COLUMN payment_gateway ENUM('midtrans', 'tripay', 'orderkuota') DEFAULT 'midtrans'");
         } catch (\Throwable $e) {
              log_message('error', 'Gagal mengubah ENUM payment_gateway saat menambahkan orderkuota: ' . $e->getMessage());
              // Handle error atau log, mungkin perlu dilakukan manual jika ALTER TABLE gagal
-             // Jika gagal, pertimbangkan mengubah kolom payment_gateway menjadi VARCHAR
+             // Jika gagal, pertimbangkan mengubah kolom payment_gateway menjadi VARCHAR sebagai alternatif
         }
 
     }
@@ -66,21 +78,28 @@ class AddOrderkuotaFieldsToTransactions extends Migration
             'zeppelin_expiry_date',
             'zeppelin_raw_response'
         ];
-         // Periksa apakah kolom ada sebelum mencoba menghapusnya
-        foreach ($columnsToDrop as $column) {
-            if ($this->db->fieldExists($column, 'transactions')) {
-                $this->forge->dropColumn('transactions', $column);
+
+        // Periksa apakah tabel dan kolom ada sebelum mencoba menghapusnya
+        if ($this->db->tableExists('transactions')) {
+            foreach ($columnsToDrop as $column) {
+                if ($this->db->fieldExists($column, 'transactions')) {
+                    try {
+                        $this->forge->dropColumn('transactions', $column);
+                    } catch (\Throwable $e) {
+                         log_message('error', "Gagal menghapus kolom {$column}: " . $e->getMessage());
+                    }
+                }
             }
         }
 
-
         // Kembalikan enum payment_gateway (jika diubah di up())
-         try {
-             // MySQL Syntax - Hapus 'orderkuota' dari enum
-             $this->db->query("ALTER TABLE transactions MODIFY COLUMN payment_gateway ENUM('midtrans', 'tripay') DEFAULT 'midtrans'");
-        } catch (\Throwable $e) {
-             log_message('error', 'Gagal mengembalikan ENUM payment_gateway saat rollback: ' . $e->getMessage());
+        if ($this->db->tableExists('transactions')) {
+            try {
+                 // MySQL Syntax - Hapus 'orderkuota' dari enum
+                 $this->db->query("ALTER TABLE transactions MODIFY COLUMN payment_gateway ENUM('midtrans', 'tripay') DEFAULT 'midtrans'");
+            } catch (\Throwable $e) {
+                 log_message('error', 'Gagal mengembalikan ENUM payment_gateway saat rollback: ' . $e->getMessage());
+            }
         }
-
     }
 }
