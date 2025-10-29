@@ -3,7 +3,8 @@
 namespace App\Libraries;
 
 use Config\Orderkuota as OrderkuotaConfig;
-use CodeIgniter\HTTP\ClientInterface;
+// Hapus atau comment use CodeIgniter\HTTP\ClientInterface; jika tidak dipakai di tempat lain
+// use CodeIgniter\HTTP\ClientInterface;
 use CodeIgniter\HTTP\Exceptions\HTTPException;
 use CodeIgniter\HTTP\ResponseInterface; // Import ResponseInterface
 use Throwable; // Import Throwable
@@ -15,7 +16,9 @@ use Throwable; // Import Throwable
  */
 class ZeppelinClient
 {
-    protected ClientInterface $httpClient;
+    // Hapus atau comment type hint ClientInterface
+    // protected ClientInterface $httpClient;
+    protected $httpClient; // Hapus type hint
     protected OrderkuotaConfig $config;
     protected array $authPayload;
 
@@ -23,11 +26,12 @@ class ZeppelinClient
      * Constructor.
      *
      * @param OrderkuotaConfig|null $config Configuration object.
-     * @param ClientInterface|null  $client HTTP Client instance.
+     * @param \CodeIgniter\HTTP\ClientInterface|null  $client HTTP Client instance. // Biarkan type hint di parameter constructor
      */
-    public function __construct(?OrderkuotaConfig $config = null, ?ClientInterface $client = null)
+    public function __construct(?OrderkuotaConfig $config = null, /* Biarkan type hint di parameter */ ?\CodeIgniter\HTTP\ClientInterface $client = null)
     {
         $this->config     = $config ?? config('Orderkuota'); // Ensure config is loaded
+        // Line 31: Assign the client service result directly without strict property type check
         $this->httpClient = $client ?? \Config\Services::curlrequest([
             'base_uri' => $this->config->apiUrl,
             'timeout'  => 15, // Set default timeout

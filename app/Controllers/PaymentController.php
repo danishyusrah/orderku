@@ -8,7 +8,7 @@ use CodeIgniter\API\ResponseTrait; // Diperlukan untuk response AJAX
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\I18n\Time;
 use Config\Services;
-use Throwable;
+use Throwable; // Import Throwable
 
 // Models
 use App\Models\UserModel;
@@ -94,7 +94,7 @@ class PaymentController extends BaseController
     private function resolveGatewayForSeller(object $seller): string
     {
         // pilihan seller
-        $pref = $seller->gateway_active ?? 'system';
+        $pref = isset($seller->gateway_active) ? $seller->gateway_active : 'system'; // PHP < 7.0 compatibility
 
         if ($pref === 'midtrans') {
             return (!empty($seller->midtrans_server_key) && !empty($seller->midtrans_client_key)) ? 'midtrans' : 'system';
@@ -155,9 +155,9 @@ class PaymentController extends BaseController
     private function buildTripayClient(?object $seller = null): TripayClient
     {
         $cfgUser = [
-            'apiKey'       => $seller->tripay_api_key ?? '',
-            'privateKey'   => $seller->tripay_private_key ?? '',
-            'merchantCode' => $seller->tripay_merchant_code ?? '',
+            'apiKey'       => isset($seller->tripay_api_key) ? $seller->tripay_api_key : '', // PHP < 7.0 compatibility
+            'privateKey'   => isset($seller->tripay_private_key) ? $seller->tripay_private_key : '', // PHP < 7.0 compatibility
+            'merchantCode' => isset($seller->tripay_merchant_code) ? $seller->tripay_merchant_code : '', // PHP < 7.0 compatibility
             'isProduction' => (bool) $this->defaultTripayConfig->isProduction, // Ambil mode produksi dari config default
         ];
 
@@ -209,7 +209,7 @@ class PaymentController extends BaseController
             $parts = explode(' ', $expiryString); // e.g., ["30", "Okt", "2025,", "14:35:00"]
             if (count($parts) >= 4) {
                  $day = $parts[0];
-                 $monthEng = $monthMap[$parts[1]] ?? $parts[1]; // Map month
+                 $monthEng = isset($monthMap[$parts[1]]) ? $monthMap[$parts[1]] : $parts[1]; // Map month // PHP < 7.0 compatibility
                  $year = rtrim($parts[2], ',');
                  $time = $parts[3];
                  $dateTimeString = "{$day} {$monthEng} {$year} {$time}";
@@ -377,12 +377,12 @@ class PaymentController extends BaseController
             try {
                 $resp = $client->createTransaction($payload);
                 if (!$resp['success']) {
-                    throw new \RuntimeException($resp['message'] ?? 'Unknown Tripay error');
+                    throw new \RuntimeException(isset($resp['message']) ? $resp['message'] : 'Unknown Tripay error'); // PHP < 7.0 compatibility
                 }
-                $data = $resp['data'] ?? [];
+                $data = isset($resp['data']) ? $resp['data'] : []; // PHP < 7.0 compatibility
                 $this->transactionModel->update($txId, [
-                    'tripay_reference' => $data['reference'] ?? null,
-                    'tripay_pay_url'   => $data['checkout_url'] ?? null,
+                    'tripay_reference' => isset($data['reference']) ? $data['reference'] : null, // PHP < 7.0 compatibility
+                    'tripay_pay_url'   => isset($data['checkout_url']) ? $data['checkout_url'] : null, // PHP < 7.0 compatibility
                     'tripay_raw'       => json_encode($resp),
                 ]);
                 $db->transCommit();
@@ -390,9 +390,9 @@ class PaymentController extends BaseController
                 return $this->response->setJSON([
                     'gateway' => 'tripay',
                     'status'  => 'ok',
-                    'reference'   => $data['reference'] ?? null,
-                    'checkoutUrl' => $data['checkout_url'] ?? null,
-                    'qrUrl'       => $data['qr_url'] ?? null,
+                    'reference'   => isset($data['reference']) ? $data['reference'] : null, // PHP < 7.0 compatibility
+                    'checkoutUrl' => isset($data['checkout_url']) ? $data['checkout_url'] : null, // PHP < 7.0 compatibility
+                    'qrUrl'       => isset($data['qr_url']) ? $data['qr_url'] : null, // PHP < 7.0 compatibility
                     'orderId'     => $orderId,
                 ]);
             } catch (\Throwable $e) {
@@ -413,18 +413,18 @@ class PaymentController extends BaseController
                 // Mengirim expiry time ke API
                 $resp = $client->createPayment($refId, (int)$premiumPrice); // expiry time now handled inside client
                 if (!$resp['success']) {
-                    throw new \RuntimeException($resp['message'] ?? 'Unknown Zeppelin error');
+                    throw new \RuntimeException(isset($resp['message']) ? $resp['message'] : 'Unknown Zeppelin error'); // PHP < 7.0 compatibility
                 }
-                $data = $resp['data'] ?? [];
-                $qrisData = $data['qris'] ?? [];
+                $data = isset($resp['data']) ? $resp['data'] : []; // PHP < 7.0 compatibility
+                $qrisData = isset($data['qris']) ? $data['qris'] : []; // PHP < 7.0 compatibility
 
                 // Corrected field names
-                $expiryDate = $this->parseZeppelinExpiry($data['expired_date_str'] ?? null); // Parse the date string
+                $expiryDate = $this->parseZeppelinExpiry(isset($data['expired_date_str']) ? $data['expired_date_str'] : null); // PHP < 7.0 compatibility // Parse the date string
 
                 $this->transactionModel->update($txId, [
-                    'zeppelin_reference_id'  => $data['reference_id'] ?? null,
-                    'zeppelin_qr_url'  => $qrisData['qris_image_url'] ?? null,
-                    'zeppelin_paid_amount' => $data['paid_amount'] ?? null,
+                    'zeppelin_reference_id'  => isset($data['reference_id']) ? $data['reference_id'] : null, // PHP < 7.0 compatibility
+                    'zeppelin_qr_url'  => isset($qrisData['qris_image_url']) ? $qrisData['qris_image_url'] : null, // PHP < 7.0 compatibility
+                    'zeppelin_paid_amount' => isset($data['paid_amount']) ? $data['paid_amount'] : null, // PHP < 7.0 compatibility
                     'zeppelin_expiry_date' => $expiryDate, // Save parsed date
                     'zeppelin_raw_response' => json_encode($resp), // Corrected field name
                 ]);
@@ -434,10 +434,10 @@ class PaymentController extends BaseController
                 return $this->response->setJSON([
                     'gateway'     => 'orderkuota',
                     'status'      => 'ok',
-                    'reference'   => $data['reference_id'] ?? null,
-                    'qrUrl'       => $qrisData['qris_image_url'] ?? null,
-                    'paidAmount'  => $data['paid_amount'] ?? null,
-                    'expiry'      => $data['expired_date_str'] ?? null, // Kirim string asli ke frontend
+                    'reference'   => isset($data['reference_id']) ? $data['reference_id'] : null, // PHP < 7.0 compatibility
+                    'qrUrl'       => isset($qrisData['qris_image_url']) ? $qrisData['qris_image_url'] : null, // PHP < 7.0 compatibility
+                    'paidAmount'  => isset($data['paid_amount']) ? $data['paid_amount'] : null, // PHP < 7.0 compatibility
+                    'expiry'      => isset($data['expired_date_str']) ? $data['expired_date_str'] : null, // PHP < 7.0 compatibility // Kirim string asli ke frontend
                     'orderId'     => $orderId,
                 ]);
 
@@ -467,11 +467,11 @@ class PaymentController extends BaseController
         }
 
         $json = $this->request->getJSON();
-        $productId = filter_var($json->productId ?? null, FILTER_VALIDATE_INT);
-        $variantId = filter_var($json->variantId ?? null, FILTER_VALIDATE_INT); // Null if not provided or invalid
-        $buyerName = trim(strip_tags($json->name ?? ''));
-        $buyerEmail = filter_var(trim($json->email ?? ''), FILTER_VALIDATE_EMAIL);
-        $quantity = filter_var($json->quantity ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $productId = filter_var(isset($json->productId) ? $json->productId : null, FILTER_VALIDATE_INT); // PHP < 7.0 compatibility
+        $variantId = filter_var(isset($json->variantId) ? $json->variantId : null, FILTER_VALIDATE_INT); // PHP < 7.0 compatibility // Null if not provided or invalid
+        $buyerName = trim(strip_tags(isset($json->name) ? $json->name : '')); // PHP < 7.0 compatibility
+        $buyerEmail = filter_var(trim(isset($json->email) ? $json->email : ''), FILTER_VALIDATE_EMAIL); // PHP < 7.0 compatibility
+        $quantity = filter_var(isset($json->quantity) ? $json->quantity : 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]); // PHP < 7.0 compatibility
 
         if (!$productId || !$buyerName || !$buyerEmail || $quantity === false || $quantity <= 0) {
             log_message('warning', '[PaymentController] payForProduct: Invalid input data.', (array)$json);
@@ -681,13 +681,13 @@ class PaymentController extends BaseController
             try {
                 $resp = $client->createTransaction($payload);
                 if (!$resp['success']) {
-                    throw new \RuntimeException($resp['message'] ?? 'Unknown Tripay error');
+                    throw new \RuntimeException(isset($resp['message']) ? $resp['message'] : 'Unknown Tripay error'); // PHP < 7.0 compatibility
                 }
-                $data = $resp['data'] ?? [];
+                $data = isset($resp['data']) ? $resp['data'] : []; // PHP < 7.0 compatibility
 
                 $this->transactionModel->update($txId, [
-                    'tripay_reference' => $data['reference'] ?? null,
-                    'tripay_pay_url'   => $data['checkout_url'] ?? null,
+                    'tripay_reference' => isset($data['reference']) ? $data['reference'] : null, // PHP < 7.0 compatibility
+                    'tripay_pay_url'   => isset($data['checkout_url']) ? $data['checkout_url'] : null, // PHP < 7.0 compatibility
                     'tripay_raw'       => json_encode($resp),
                 ]);
                 $db->transCommit();
@@ -695,9 +695,9 @@ class PaymentController extends BaseController
                 return $this->response->setJSON([
                     'gateway' => 'tripay',
                     'status'  => 'ok',
-                    'reference'   => $data['reference'] ?? null,
-                    'checkoutUrl' => $data['checkout_url'] ?? null,
-                    'qrUrl'       => $data['qr_url'] ?? null,
+                    'reference'   => isset($data['reference']) ? $data['reference'] : null, // PHP < 7.0 compatibility
+                    'checkoutUrl' => isset($data['checkout_url']) ? $data['checkout_url'] : null, // PHP < 7.0 compatibility
+                    'qrUrl'       => isset($data['qr_url']) ? $data['qr_url'] : null, // PHP < 7.0 compatibility
                     'orderId'     => $orderId,
                 ]);
             } catch (\Throwable $e) {
@@ -719,18 +719,18 @@ class PaymentController extends BaseController
                 // Mengirim expiry time ke API
                 $resp = $client->createPayment($refId, (int)$totalAmount); // expiry time now handled inside client
                 if (!$resp['success']) {
-                    throw new \RuntimeException($resp['message'] ?? 'Unknown Zeppelin error');
+                    throw new \RuntimeException(isset($resp['message']) ? $resp['message'] : 'Unknown Zeppelin error'); // PHP < 7.0 compatibility
                 }
-                $data = $resp['data'] ?? [];
-                $qrisData = $data['qris'] ?? [];
+                $data = isset($resp['data']) ? $resp['data'] : []; // PHP < 7.0 compatibility
+                $qrisData = isset($data['qris']) ? $data['qris'] : []; // PHP < 7.0 compatibility
 
                 // Corrected field names
-                $expiryDate = $this->parseZeppelinExpiry($data['expired_date_str'] ?? null); // Parse the date string
+                $expiryDate = $this->parseZeppelinExpiry(isset($data['expired_date_str']) ? $data['expired_date_str'] : null); // PHP < 7.0 compatibility // Parse the date string
 
                 $this->transactionModel->update($txId, [
-                    'zeppelin_reference_id'  => $data['reference_id'] ?? null,
-                    'zeppelin_qr_url'  => $qrisData['qris_image_url'] ?? null,
-                    'zeppelin_paid_amount' => $data['paid_amount'] ?? null,
+                    'zeppelin_reference_id'  => isset($data['reference_id']) ? $data['reference_id'] : null, // PHP < 7.0 compatibility
+                    'zeppelin_qr_url'  => isset($qrisData['qris_image_url']) ? $qrisData['qris_image_url'] : null, // PHP < 7.0 compatibility
+                    'zeppelin_paid_amount' => isset($data['paid_amount']) ? $data['paid_amount'] : null, // PHP < 7.0 compatibility
                     'zeppelin_expiry_date' => $expiryDate, // Save parsed date
                     'zeppelin_raw_response' => json_encode($resp), // Corrected field name
                 ]);
@@ -740,10 +740,10 @@ class PaymentController extends BaseController
                 return $this->response->setJSON([
                     'gateway'     => 'orderkuota',
                     'status'      => 'ok',
-                    'reference'   => $data['reference_id'] ?? null,
-                    'qrUrl'       => $qrisData['qris_image_url'] ?? null,
-                    'paidAmount'  => $data['paid_amount'] ?? null,
-                    'expiry'      => $data['expired_date_str'] ?? null, // Kirim string asli ke frontend
+                    'reference'   => isset($data['reference_id']) ? $data['reference_id'] : null, // PHP < 7.0 compatibility
+                    'qrUrl'       => isset($qrisData['qris_image_url']) ? $qrisData['qris_image_url'] : null, // PHP < 7.0 compatibility
+                    'paidAmount'  => isset($data['paid_amount']) ? $data['paid_amount'] : null, // PHP < 7.0 compatibility
+                    'expiry'      => isset($data['expired_date_str']) ? $data['expired_date_str'] : null, // PHP < 7.0 compatibility // Kirim string asli ke frontend
                     'orderId'     => $orderId,
                 ]);
 
@@ -779,7 +779,7 @@ class PaymentController extends BaseController
 
         // Extra check: ensure transaction is found and *NOW* marked as success in DB
         if (!$transaction || !in_array($transaction->status, ['success', 'settlement', 'capture'])) {
-            log_message('error', "[Handle Success] Order ID {$orderId} not found or status is not 'success'/'settlement'/'capture' in DB ({$transaction->status ?? 'Not Found'}) for fulfillment.");
+            log_message('error', "[Handle Success] Order ID {$orderId} not found or status is not 'success'/'settlement'/'capture' in DB (". (isset($transaction->status) ? $transaction->status : 'Not Found') .") for fulfillment."); // PHP < 7.0 compatibility
             return false; // Don't proceed if status is not correct in DB
         }
 
@@ -800,8 +800,8 @@ class PaymentController extends BaseController
             }
         // Action: Process Product Sale
         } elseif ($transaction->transaction_type === 'product' && $transaction->product_id) {
-            $quantityNeeded = (int) ($transaction->quantity ?? 1);
-            $variantId = $transaction->variant_id ?? null; // Retrieve variant_id
+            $quantityNeeded = (int) (isset($transaction->quantity) ? $transaction->quantity : 1); // PHP < 7.0 compatibility
+            $variantId = isset($transaction->variant_id) ? $transaction->variant_id : null; // PHP < 7.0 compatibility // Retrieve variant_id
             $isVariantSale = ($variantId !== null);
             $buyerNameClean = $transaction->buyer_name;
 
@@ -839,7 +839,7 @@ class PaymentController extends BaseController
                             // 5. Prepare and Send product email
                             $product = $this->productModel->find($transaction->product_id);
                             $productDisplayName = $product ? $product->product_name : 'Produk Tidak Ditemukan';
-                            $variantNameFromTx = $transaction->variant_name ?? null;
+                            $variantNameFromTx = isset($transaction->variant_name) ? $transaction->variant_name : null; // PHP < 7.0 compatibility
                             if ($isVariantSale && $variantNameFromTx) {
                                  $productDisplayName .= ' - ' . $variantNameFromTx;
                             }
@@ -895,7 +895,7 @@ class PaymentController extends BaseController
         try {
             // 1. Initial Parse to get Order ID
             $initialNotificationCheck = json_decode($this->request->getBody());
-            $orderId = $initialNotificationCheck->order_id ?? null; // Assign to $orderId
+            $orderId = isset($initialNotificationCheck->order_id) ? $initialNotificationCheck->order_id : null; // PHP < 7.0 compatibility // Assign to $orderId
 
             if (!$orderId) {
                  throw new \Exception('Order ID not found in initial notification payload.');
@@ -925,12 +925,12 @@ class PaymentController extends BaseController
             $notif = new Notification(); // This uses the currently set server key
 
             // 5. Extract notification data (only if validation passes)
-            $transactionStatus = $notif->transaction_status ?? null;
-            $fraudStatus       = $notif->fraud_status ?? null;
-            $paymentType       = $notif->payment_type ?? 'unknown';
+            $transactionStatus = isset($notif->transaction_status) ? $notif->transaction_status : null; // PHP < 7.0 compatibility
+            $fraudStatus       = isset($notif->fraud_status) ? $notif->fraud_status : null; // PHP < 7.0 compatibility
+            $paymentType       = isset($notif->payment_type) ? $notif->payment_type : 'unknown'; // PHP < 7.0 compatibility
 
             // Log successful validation
-            log_message('info', "[Midtrans Webhook] SIGNATURE VALID for Order ID: {$orderId} using key source '{$transaction->midtrans_key_source ?? 'unknown'}'. Processing Status: {$transactionStatus}, Type: {$paymentType}, Fraud: {$fraudStatus}");
+            log_message('info', "[Midtrans Webhook] SIGNATURE VALID for Order ID: {$orderId} using key source '". (isset($transaction->midtrans_key_source) ? $transaction->midtrans_key_source : 'unknown') ."'. Processing Status: {$transactionStatus}, Type: {$paymentType}, Fraud: {$fraudStatus}"); // PHP < 7.0 compatibility
 
         } catch (\Exception $e) {
             $keySourceInfo = $transaction ? "'{$transaction->midtrans_key_source}'" : 'Unknown (transaction not found)';
@@ -1045,9 +1045,9 @@ class PaymentController extends BaseController
         }
 
         $json = json_decode($raw, true) ?: [];
-        $merchantRef = $json['merchant_ref'] ?? null;
-        $reference   = $json['reference'] ?? null;
-        $status      = strtolower($json['status'] ?? '');
+        $merchantRef = isset($json['merchant_ref']) ? $json['merchant_ref'] : null; // PHP < 7.0 compatibility
+        $reference   = isset($json['reference']) ? $json['reference'] : null; // PHP < 7.0 compatibility
+        $status      = strtolower(isset($json['status']) ? $json['status'] : ''); // PHP < 7.0 compatibility
 
         if (!$merchantRef) {
             log_message('error', "[Tripay Webhook] No merchant_ref found.");
@@ -1097,7 +1097,7 @@ class PaymentController extends BaseController
             'expired' => 'expired',
             // Tambahkan mapping lain jika ada status baru dari Tripay
         ];
-        $newDbStatus = $map[$status] ?? $tx->status; // Default to current status if unmapped/unknown
+        $newDbStatus = isset($map[$status]) ? $map[$status] : $tx->status; // PHP < 7.0 compatibility // Default to current status if unmapped/unknown
 
         // Jika status tidak berubah, update raw data saja dan return
         if ($newDbStatus === $tx->status) {
@@ -1118,7 +1118,7 @@ class PaymentController extends BaseController
             // 1. Update status dan data Tripay lainnya
             $save = [
                 'status'            => $newDbStatus,
-                'tripay_reference'  => $reference ?? $tx->tripay_reference, // Update jika ada reference baru
+                'tripay_reference'  => $reference ?? $tx->tripay_reference, // PHP < 7.0 compatibility // Update jika ada reference baru
                 'tripay_raw'        => $raw,
                 'updated_at'        => date('Y-m-d H:i:s'),
             ];
@@ -1185,14 +1185,14 @@ class PaymentController extends BaseController
 
         $json = json_decode($raw, true) ?: [];
         // Use the correct field name from migration: zeppelin_reference_id
-        $referenceId = $json['reference_id'] ?? null; // Sesuaikan key jika beda
+        $referenceId = isset($json['reference_id']) ? $json['reference_id'] : null; // PHP < 7.0 compatibility // Sesuaikan key jika beda
 
         if (!$referenceId) {
             log_message('error', "[Zeppelin Webhook] No reference_id found in payload.");
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'No reference_id']);
         }
 
-        // Cari transaksi berdasarkan zeppelin_reference_id (correct field name)
+        // Cari transaksi berdasarkan zeppelin_reference_id (correct field name) atau order_id
         $tx = $this->transactionModel->where('zeppelin_reference_id', $referenceId)->first();
         if (!$tx) {
             // Coba cari berdasarkan order_id jika ref_id = order_id saat create
@@ -1228,7 +1228,7 @@ class PaymentController extends BaseController
                     'failed'  => 'failed',
                     'expired' => 'expired',
                 ];
-                $newDbStatus = $map[$zeppelinStatus] ?? $tx->status; // Fallback ke status DB jika tidak termapping
+                $newDbStatus = isset($map[$zeppelinStatus]) ? $map[$zeppelinStatus] : $tx->status; // PHP < 7.0 compatibility // Fallback ke status DB jika tidak termapping
 
             } else {
                  log_message('error', "[Zeppelin Notify] Failed to check status via API for Ref {$referenceId}. Response: " . json_encode($statusResp));
@@ -1357,7 +1357,7 @@ class PaymentController extends BaseController
                     'failed'  => 'failed',
                     'expired' => 'expired',
                 ];
-                $newDbStatus = $map[$zeppelinStatus] ?? $tx->status;
+                $newDbStatus = isset($map[$zeppelinStatus]) ? $map[$zeppelinStatus] : $tx->status; // PHP < 7.0 compatibility
 
                 // Jika status berubah menjadi final (success, failed, expired) dari API
                 if ($newDbStatus !== $tx->status && in_array($newDbStatus, ['success', 'failed', 'expired'])) {
@@ -1502,7 +1502,9 @@ class PaymentController extends BaseController
         $product = $this->productModel->find($transaction->product_id);
         $productName = $product ? $product->product_name : 'Produk Tidak Dikenal (ID: ' . $transaction->product_id . ')';
         $variantName = '';
-        $variantNameFromTx = $transaction->variant_name ?? null; // Use saved variant name
+        // FIX: Replace ?? with isset() for PHP < 7.0 compatibility
+        // $variantNameFromTx = $transaction->variant_name ?? null; // Use saved variant name
+        $variantNameFromTx = isset($transaction->variant_name) ? $transaction->variant_name : null; // PHP < 7.0 compatibility
         if ($variantId && $variantNameFromTx) {
             $variantName = ' (Varian: ' . $variantNameFromTx . ')';
         } elseif ($variantId) { // Fallback if name wasn't saved in tx
