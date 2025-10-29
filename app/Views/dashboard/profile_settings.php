@@ -259,19 +259,20 @@
             <label class="text-sm font-medium text-gray-300 w-full sm:w-auto mb-2 sm:mb-0">Gateway Aktif:</label>
             <div class="flex flex-wrap gap-x-6 gap-y-2">
             <label class="inline-flex items-center gap-2 text-gray-300 cursor-pointer">
-                <input type="radio" name="gateway_active" value="system" <?= ($user->gateway_active ?? 'system') === 'system' ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
+                 <?php $activeGateway = $user->gateway_active ?? 'system'; // Ambil nilai atau default ke 'system' ?>
+                <input type="radio" name="gateway_active" value="system" <?= ($activeGateway === 'system') ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
                 <span>Default Sistem</span>
             </label>
             <label class="inline-flex items-center gap-2 text-gray-300 cursor-pointer">
-                <input type="radio" name="gateway_active" value="midtrans" <?= ($user->gateway_active ?? '') === 'midtrans' ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
+                <input type="radio" name="gateway_active" value="midtrans" <?= ($activeGateway === 'midtrans') ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
                 <span>Midtrans</span>
             </label>
             <label class="inline-flex items-center gap-2 text-gray-300 cursor-pointer">
-                <input type="radio" name="gateway_active" value="tripay" <?= ($user->gateway_active ?? '') === 'tripay' ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
+                <input type="radio" name="gateway_active" value="tripay" <?= ($activeGateway === 'tripay') ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
                 <span>Tripay</span>
             </label>
             <label class="inline-flex items-center gap-2 text-gray-300 cursor-pointer">
-                 <input type="radio" name="gateway_active" value="orderkuota" <?= ($user->gateway_active ?? '') === 'orderkuota' ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
+                 <input type="radio" name="gateway_active" value="orderkuota" <?= ($activeGateway === 'orderkuota') ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
                  <span>Orderkuota</span>
             </label>
             </div>

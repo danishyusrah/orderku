@@ -62,13 +62,8 @@ class PaymentController extends BaseController
         $this->defaultOrderkuotaConfig = new OrderkuotaConfig();
 
         // Init Zeppelin Client (using system default config initially)
-        $this->zeppelinClient = new ZeppelinClient([
-            'apiUrl' => $this->defaultOrderkuotaConfig->apiUrl,
-            'auth' => [
-                'auth_username' => $this->defaultOrderkuotaConfig->authUsername,
-                'auth_token' => $this->defaultOrderkuotaConfig->authToken,
-            ]
-        ]);
+        // Corrected constructor call based on ZeppelinClient.php
+        $this->zeppelinClient = new ZeppelinClient($this->defaultOrderkuotaConfig);
 
         // Set initial Midtrans config (default)
         $this->configureMidtrans();
@@ -109,7 +104,13 @@ class PaymentController extends BaseController
         }
         if ($pref === 'orderkuota') {
             // Orderkuota saat ini hanya pakai config sistem, jadi langsung return jika dipilih
-            return 'orderkuota';
+            // Pastikan config sistem orderkuota valid
+            if(!empty($this->defaultOrderkuotaConfig->authUsername) && !empty($this->defaultOrderkuotaConfig->authToken)){
+                return 'orderkuota';
+            } else {
+                 log_message('warning', '[Gateway Resolution] Seller prefers Orderkuota, but system config is incomplete. Falling back to system default.');
+                 return 'system'; // Fallback jika config sistem tidak lengkap
+            }
         }
         // system default
         return 'system';
@@ -121,7 +122,25 @@ class PaymentController extends BaseController
     private function systemDefaultGateway(): string
     {
         $def = strtolower((string) env('PAYMENT_DEFAULT_GATEWAY', 'midtrans'));
-        return in_array($def, ['midtrans', 'tripay', 'orderkuota'], true) ? $def : 'midtrans';
+        // Validasi apakah gateway default sistem valid dan terkonfigurasi
+        if ($def === 'midtrans' && (!empty($this->defaultMidtransConfig->serverKey) && !empty($this->defaultMidtransConfig->clientKey))) {
+            return 'midtrans';
+        }
+        if ($def === 'tripay' && (!empty($this->defaultTripayConfig->apiKey) && !empty($this->defaultTripayConfig->privateKey) && !empty($this->defaultTripayConfig->merchantCode))) {
+            return 'tripay';
+        }
+         if ($def === 'orderkuota' && (!empty($this->defaultOrderkuotaConfig->authUsername) && !empty($this->defaultOrderkuotaConfig->authToken))) {
+            return 'orderkuota';
+        }
+
+        // Fallback jika default tidak valid atau tidak terkonfigurasi, coba Midtrans lagi
+        if (!empty($this->defaultMidtransConfig->serverKey) && !empty($this->defaultMidtransConfig->clientKey)) {
+             log_message('warning', "[System Default Gateway] Configured default '{$def}' is invalid or keys missing. Falling back to Midtrans.");
+             return 'midtrans';
+        }
+        // Jika Midtrans juga tidak ada, log error
+        log_message('error', "[System Default Gateway] No valid default payment gateway is configured properly in .env or config files.");
+        return 'midtrans'; // Kembalikan midtrans sebagai last resort, meskipun mungkin error nanti
     }
 
     // =========================================================================
@@ -164,17 +183,49 @@ class PaymentController extends BaseController
      */
     private function buildZeppelinClient(?object $seller = null): ZeppelinClient
     {
-        // Saat ini, Orderkuota/Zeppelin selalu pakai config sistem
-        // Jika nanti ada field auth per user, logika bisa ditambahkan di sini
-        return new ZeppelinClient([
-            'apiUrl' => $this->defaultOrderkuotaConfig->apiUrl,
-            'auth' => [
-                'auth_username' => $this->defaultOrderkuotaConfig->authUsername,
-                'auth_token' => $this->defaultOrderkuotaConfig->authToken,
-            ]
-        ]);
-        // return $this->zeppelinClient; // Bisa juga pakai instance yang sudah dibuat di constructor
+        // Selalu gunakan instance yang sudah dibuat di constructor yang pakai config default
+        return $this->zeppelinClient;
     }
+
+    /**
+     * Helper to parse Zeppelin expiry date string to MySQL DATETIME format.
+     * Assumes format "DD MMM YYYY, HH:mm:ss" like "30 Oct 2025, 14:35:00"
+     * @param string|null $expiryString
+     * @return string|null MySQL DATETIME format or null
+     */
+    private function parseZeppelinExpiry(?string $expiryString): ?string
+    {
+        if (empty($expiryString)) {
+            return null;
+        }
+        try {
+            // Try parsing with CodeIgniter Time (handles localization better)
+            // Need to map Indonesian month names if locale is ID
+            // Simple mapping for now
+            $monthMap = [
+                'Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr', 'Mei' => 'May', 'Jun' => 'Jun',
+                'Jul' => 'Jul', 'Agu' => 'Aug', 'Sep' => 'Sep', 'Okt' => 'Oct', 'Nov' => 'Nov', 'Des' => 'Dec'
+            ];
+            $parts = explode(' ', $expiryString); // e.g., ["30", "Okt", "2025,", "14:35:00"]
+            if (count($parts) >= 4) {
+                 $day = $parts[0];
+                 $monthEng = $monthMap[$parts[1]] ?? $parts[1]; // Map month
+                 $year = rtrim($parts[2], ',');
+                 $time = $parts[3];
+                 $dateTimeString = "{$day} {$monthEng} {$year} {$time}";
+                 return Time::parse($dateTimeString, 'Asia/Jakarta')->setTimezone('UTC')->toDateTimeString(); // Convert to UTC for DB
+            }
+            // Fallback parsing if Time::parse fails or format differs
+            $timestamp = strtotime($expiryString);
+            if ($timestamp === false) return null;
+            return date('Y-m-d H:i:s', $timestamp); // Convert to MySQL DATETIME
+
+        } catch (\Exception $e) {
+            log_message('error', "[Parse Zeppelin Expiry] Failed to parse '{$expiryString}'. Error: " . $e->getMessage());
+            return null;
+        }
+    }
+
 
     // =========================================================================
     // C. PAY FOR PREMIUM (MODIFIED FOR ALL GATEWAYS)
@@ -244,11 +295,12 @@ class PaymentController extends BaseController
             'tripay_reference' => null,
             'tripay_pay_url'   => null,
             'tripay_raw'       => null,
-            'zeppelin_ref_id'  => null,
+            // Corrected Zeppelin field names based on migration
+            'zeppelin_reference_id'  => null,
             'zeppelin_qr_url'  => null,
             'zeppelin_paid_amount' => null,
-            'zeppelin_expiry_str' => null,
-            'zeppelin_raw'     => null,
+            'zeppelin_expiry_date' => null, // Changed from expiry_str
+            'zeppelin_raw_response'     => null, // Changed from raw
         ];
 
         $saveResult = $this->transactionModel->save($txData);
@@ -354,22 +406,27 @@ class PaymentController extends BaseController
         if ($resolved === 'orderkuota') {
             $client = $this->buildZeppelinClient(null); // Pakai null -> default config
             $refId = $orderId; // Gunakan orderId sebagai reference_id untuk Zeppelin
+            // Mengambil expiry time dari config Orderkuota
             $expiryMinutes = $this->defaultOrderkuotaConfig->expiryTime;
 
             try {
-                $resp = $client->createPayment($refId, (int)$premiumPrice, $expiryMinutes);
+                // Mengirim expiry time ke API
+                $resp = $client->createPayment($refId, (int)$premiumPrice); // expiry time now handled inside client
                 if (!$resp['success']) {
                     throw new \RuntimeException($resp['message'] ?? 'Unknown Zeppelin error');
                 }
                 $data = $resp['data'] ?? [];
                 $qrisData = $data['qris'] ?? [];
 
+                // Corrected field names
+                $expiryDate = $this->parseZeppelinExpiry($data['expired_date_str'] ?? null); // Parse the date string
+
                 $this->transactionModel->update($txId, [
-                    'zeppelin_ref_id'  => $data['reference_id'] ?? null,
+                    'zeppelin_reference_id'  => $data['reference_id'] ?? null,
                     'zeppelin_qr_url'  => $qrisData['qris_image_url'] ?? null,
                     'zeppelin_paid_amount' => $data['paid_amount'] ?? null,
-                    'zeppelin_expiry_str' => $data['expired_date_str'] ?? null,
-                    'zeppelin_raw'     => json_encode($resp),
+                    'zeppelin_expiry_date' => $expiryDate, // Save parsed date
+                    'zeppelin_raw_response' => json_encode($resp), // Corrected field name
                 ]);
 
                 $db->transCommit();
@@ -380,7 +437,7 @@ class PaymentController extends BaseController
                     'reference'   => $data['reference_id'] ?? null,
                     'qrUrl'       => $qrisData['qris_image_url'] ?? null,
                     'paidAmount'  => $data['paid_amount'] ?? null,
-                    'expiry'      => $data['expired_date_str'] ?? null,
+                    'expiry'      => $data['expired_date_str'] ?? null, // Kirim string asli ke frontend
                     'orderId'     => $orderId,
                 ]);
 
@@ -533,11 +590,12 @@ class PaymentController extends BaseController
             'tripay_reference' => null,
             'tripay_pay_url'   => null,
             'tripay_raw'       => null,
-            'zeppelin_ref_id'  => null,
+            // Corrected Zeppelin field names
+            'zeppelin_reference_id'  => null,
             'zeppelin_qr_url'  => null,
             'zeppelin_paid_amount' => null,
-            'zeppelin_expiry_str' => null,
-            'zeppelin_raw'     => null,
+            'zeppelin_expiry_date' => null, // Changed from expiry_str
+            'zeppelin_raw_response' => null, // Changed from raw
         ];
 
         $saveResult = $this->transactionModel->save($txData);
@@ -653,23 +711,28 @@ class PaymentController extends BaseController
         if ($resolved === 'orderkuota') {
             $client = $this->buildZeppelinClient(null); // Selalu pakai config sistem
             $refId = $orderId; // Gunakan orderId sebagai reference_id untuk Zeppelin
+            // Mengambil expiry time dari config Orderkuota
             $expiryMinutes = $this->defaultOrderkuotaConfig->expiryTime;
 
             try {
                 // Perhatikan: amount di Zeppelin adalah TOTAL amount
-                $resp = $client->createPayment($refId, (int)$totalAmount, $expiryMinutes);
+                // Mengirim expiry time ke API
+                $resp = $client->createPayment($refId, (int)$totalAmount); // expiry time now handled inside client
                 if (!$resp['success']) {
                     throw new \RuntimeException($resp['message'] ?? 'Unknown Zeppelin error');
                 }
                 $data = $resp['data'] ?? [];
                 $qrisData = $data['qris'] ?? [];
 
+                // Corrected field names
+                $expiryDate = $this->parseZeppelinExpiry($data['expired_date_str'] ?? null); // Parse the date string
+
                 $this->transactionModel->update($txId, [
-                    'zeppelin_ref_id'  => $data['reference_id'] ?? null,
+                    'zeppelin_reference_id'  => $data['reference_id'] ?? null,
                     'zeppelin_qr_url'  => $qrisData['qris_image_url'] ?? null,
                     'zeppelin_paid_amount' => $data['paid_amount'] ?? null,
-                    'zeppelin_expiry_str' => $data['expired_date_str'] ?? null,
-                    'zeppelin_raw'     => json_encode($resp),
+                    'zeppelin_expiry_date' => $expiryDate, // Save parsed date
+                    'zeppelin_raw_response' => json_encode($resp), // Corrected field name
                 ]);
 
                 $db->transCommit();
@@ -680,7 +743,7 @@ class PaymentController extends BaseController
                     'reference'   => $data['reference_id'] ?? null,
                     'qrUrl'       => $qrisData['qris_image_url'] ?? null,
                     'paidAmount'  => $data['paid_amount'] ?? null,
-                    'expiry'      => $data['expired_date_str'] ?? null,
+                    'expiry'      => $data['expired_date_str'] ?? null, // Kirim string asli ke frontend
                     'orderId'     => $orderId,
                 ]);
 
@@ -1121,6 +1184,7 @@ class PaymentController extends BaseController
         log_message('info', "[Zeppelin Webhook] Received notification. Raw input: " . $raw);
 
         $json = json_decode($raw, true) ?: [];
+        // Use the correct field name from migration: zeppelin_reference_id
         $referenceId = $json['reference_id'] ?? null; // Sesuaikan key jika beda
 
         if (!$referenceId) {
@@ -1128,8 +1192,8 @@ class PaymentController extends BaseController
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'No reference_id']);
         }
 
-        // Cari transaksi berdasarkan zeppelin_ref_id
-        $tx = $this->transactionModel->where('zeppelin_ref_id', $referenceId)->first();
+        // Cari transaksi berdasarkan zeppelin_reference_id (correct field name)
+        $tx = $this->transactionModel->where('zeppelin_reference_id', $referenceId)->first();
         if (!$tx) {
             // Coba cari berdasarkan order_id jika ref_id = order_id saat create
             $tx = $this->transactionModel->where('order_id', $referenceId)->first();
@@ -1148,6 +1212,7 @@ class PaymentController extends BaseController
 
         // Jika transaksi masih pending, cek ulang status ke API Zeppelin
         $newDbStatus = $tx->status; // Default ke status saat ini
+        $zeppelinStatus = 'unknown'; // Initialize variable
         try {
             $client = $this->buildZeppelinClient(null); // Pakai config sistem
             $statusResp = $client->checkStatus($referenceId);
@@ -1179,8 +1244,9 @@ class PaymentController extends BaseController
          // Jika status tidak berubah, update raw data saja dan return
          if ($newDbStatus === $tx->status) {
             log_message('info', "[Zeppelin Webhook] No status change needed for Order ID {$tx->order_id} (Ref: {$referenceId}). Current DB Status: '{$tx->status}', API Status ('{$zeppelinStatus}') maps to: '{$newDbStatus}'. Updating raw data only.");
+             // Corrected field name
              $this->transactionModel->update($tx->id, [
-                 'zeppelin_raw' => $raw, // Update raw data dari webhook
+                 'zeppelin_raw_response' => $raw, // Update raw data dari webhook
                  'updated_at'   => date('Y-m-d H:i:s'),
              ]);
              return $this->response->setStatusCode(200)->setJSON(['success' => true, 'message' => 'No status change']);
@@ -1192,10 +1258,10 @@ class PaymentController extends BaseController
         $actionsFailed = false;
 
         try {
-            // 1. Update status dan data raw dari webhook
+            // 1. Update status dan data raw dari webhook (corrected field name)
             $save = [
                 'status'            => $newDbStatus,
-                'zeppelin_raw'      => $raw, // Simpan payload webhook asli
+                'zeppelin_raw_response' => $raw, // Simpan payload webhook asli
                 'updated_at'        => date('Y-m-d H:i:s'),
             ];
 
@@ -1259,8 +1325,8 @@ class PaymentController extends BaseController
             return $this->failValidationErrors(['referenceId' => 'Reference ID is required.']);
         }
 
-        // Cari transaksi berdasarkan zeppelin_ref_id atau order_id (jika sama)
-        $tx = $this->transactionModel->where('zeppelin_ref_id', $referenceId)
+        // Cari transaksi berdasarkan zeppelin_reference_id (correct field name) atau order_id
+        $tx = $this->transactionModel->where('zeppelin_reference_id', $referenceId)
                            ->orWhere('order_id', $referenceId) // fallback jika ref_id == order_id
                            ->first();
 
@@ -1275,6 +1341,7 @@ class PaymentController extends BaseController
         }
 
         // Jika masih pending, cek ulang ke API Zeppelin
+        $zeppelinStatus = 'unknown'; // Initialize variable
         try {
             $client = $this->buildZeppelinClient(null); // Pakai config sistem
             $statusResp = $client->checkStatus($referenceId);
@@ -1506,4 +1573,3 @@ class PaymentController extends BaseController
     }
 
 } // End Class
-

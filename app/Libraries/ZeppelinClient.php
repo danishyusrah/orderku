@@ -27,7 +27,7 @@ class ZeppelinClient
      */
     public function __construct(?OrderkuotaConfig $config = null, ?ClientInterface $client = null)
     {
-        $this->config     = $config ?? config('Orderkuota');
+        $this->config     = $config ?? config('Orderkuota'); // Ensure config is loaded
         $this->httpClient = $client ?? \Config\Services::curlrequest([
             'base_uri' => $this->config->apiUrl,
             'timeout'  => 15, // Set default timeout
@@ -60,13 +60,14 @@ class ZeppelinClient
     public function createPayment(string $referenceId, int $amount): array
     {
         $endpoint = '/api/v1/payments/create';
+        // Menggunakan expiryTime dari config
         $params   = [
             'reference_id' => $referenceId,
             'amount'       => $amount,
-            'expiry'       => $this->config->expiryTime,
+            'expiry'       => $this->config->expiryTime, // Gunakan expiryTime dari config
         ];
 
-        log_message('debug', '[ZeppelinClient] Creating payment. Ref ID: ' . $referenceId . ', Amount: ' . $amount);
+        log_message('debug', '[ZeppelinClient] Creating payment. Ref ID: ' . $referenceId . ', Amount: ' . $amount . ', Expiry: ' . $this->config->expiryTime . ' mins');
 
         // Kirim request POST dengan auth payload di body dan parameter di query string
         try {
@@ -82,7 +83,13 @@ class ZeppelinClient
             return $this->handleResponse($response, 'createPayment', $referenceId);
         } catch (Throwable $e) {
             log_message('error', '[ZeppelinClient Exception - createPayment] Ref ID: ' . $referenceId . ' Error: ' . $e->getMessage());
-            throw new \RuntimeException('Gagal membuat pembayaran: ' . $e->getMessage());
+            // Berikan pesan error yang lebih spesifik jika mungkin
+            $errorMessage = 'Gagal membuat pembayaran via Zeppelin API.';
+            if (ENVIRONMENT !== 'production') {
+                $errorMessage .= ' Detail: ' . $e->getMessage();
+            }
+             // Throw exception agar bisa ditangkap di controller
+            throw new \RuntimeException($errorMessage);
         }
     }
 
@@ -113,7 +120,12 @@ class ZeppelinClient
             return $this->handleResponse($response, 'checkStatus', $referenceId);
         } catch (Throwable $e) {
             log_message('error', '[ZeppelinClient Exception - checkStatus] Ref ID: ' . $referenceId . ' Error: ' . $e->getMessage());
-            throw new \RuntimeException('Gagal memeriksa status pembayaran: ' . $e->getMessage());
+             // Berikan pesan error yang lebih spesifik
+            $errorMessage = 'Gagal memeriksa status pembayaran via Zeppelin API.';
+             if (ENVIRONMENT !== 'production') {
+                $errorMessage .= ' Detail: ' . $e->getMessage();
+            }
+            throw new \RuntimeException($errorMessage);
         }
     }
 
@@ -144,7 +156,12 @@ class ZeppelinClient
             return $this->handleResponse($response, 'cancelPayment', $referenceId);
         } catch (Throwable $e) {
             log_message('error', '[ZeppelinClient Exception - cancelPayment] Ref ID: ' . $referenceId . ' Error: ' . $e->getMessage());
-            throw new \RuntimeException('Gagal membatalkan pembayaran: ' . $e->getMessage());
+             // Berikan pesan error yang lebih spesifik
+            $errorMessage = 'Gagal membatalkan pembayaran via Zeppelin API.';
+            if (ENVIRONMENT !== 'production') {
+                $errorMessage .= ' Detail: ' . $e->getMessage();
+            }
+            throw new \RuntimeException($errorMessage);
         }
     }
 
@@ -177,7 +194,10 @@ class ZeppelinClient
                  $errorMessage .= ' - ' . $response->getReasonPhrase();
             }
             log_message('error', "[ZeppelinClient HTTP Error - {$methodName}] Ref ID: {$referenceId} | {$errorMessage}");
-            throw new \RuntimeException($errorMessage, $statusCode);
+            // Throw exception for HTTP errors, use message from body if available
+            $exceptionMessage = (is_array($decoded) && !empty($decoded['message'])) ? $decoded['message'] : 'Terjadi kesalahan saat menghubungi API pembayaran.';
+            if(ENVIRONMENT !== 'production') $exceptionMessage .= " (HTTP {$statusCode})";
+            throw new \RuntimeException($exceptionMessage, $statusCode);
         }
 
         // Handle JSON decoding errors
@@ -192,14 +212,7 @@ class ZeppelinClient
              throw new \RuntimeException("Format response API tidak dikenali (missing 'success' field).", $statusCode);
         }
 
-        // Jika API mengembalikan success = false, lempar exception dengan message dari API
-        if ($decoded['success'] === false) {
-             $apiMessage = $decoded['message'] ?? 'Operasi gagal tanpa pesan spesifik.';
-             log_message('warning', "[ZeppelinClient API Error - {$methodName}] Ref ID: {$referenceId} | API returned success=false. Message: {$apiMessage}");
-             throw new \RuntimeException($apiMessage, $statusCode); // Gunakan RuntimeException agar bisa ditangkap controller
-        }
-
-        // Jika semua OK, kembalikan data
+        // Kembalikan response apa adanya, controller akan cek 'success' flag
         return $decoded;
     }
 
@@ -214,6 +227,7 @@ class ZeppelinClient
      */
     public static function generateReferenceID($seed): string
     {
+        // Implementasi ini mencoba meniru Node.js tapi mungkin tidak identik
         $hashPart = substr(preg_replace('/\D/', '', sha1((string)$seed)), 0, 6) ?: substr(str_shuffle("0123456789"), 0, 6);
         $timePart = substr((string)floor(microtime(true) * 1000), -6); // Timestamp milliseconds
         $randPart = mt_rand(100, 999);
@@ -221,10 +235,7 @@ class ZeppelinClient
         // Menggabungkan bagian-bagian
         $combined = $hashPart . $timePart . $randPart;
 
-        // Konversi ke base-17 (contoh, sesuaikan jika perlu) dan pastikan itu integer jika API memerlukannya
-        // Base_convert mungkin tidak cocok untuk string panjang, gunakan cara lain jika perlu representasi base-17
-        // Untuk saat ini, kita kembalikan sebagai string kombinasi saja, sesuaikan jika API Zeppelin memerlukan format spesifik
-        // return base_convert($combined, 10, 17); // Ini bisa menghasilkan nilai non-numerik jika string terlalu panjang
-        return $combined; // Kembalikan string kombinasi
+        // API Zeppelin sepertinya mengharapkan string numerik, jadi kita kembalikan $combined saja.
+        return $combined;
     }
 }

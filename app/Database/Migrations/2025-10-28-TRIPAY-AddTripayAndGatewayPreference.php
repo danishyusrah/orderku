@@ -29,7 +29,8 @@ class TRIPAYAddTripayAndGatewayPreference extends Migration
             ],
             'gateway_active' => [
                 'type'       => 'ENUM',
-                'constraint' => ['system', 'midtrans', 'tripay'],
+                // Tambahkan 'orderkuota' ke constraint ENUM
+                'constraint' => ['system', 'midtrans', 'tripay', 'orderkuota'], // <-- Updated line
                 'default'    => 'system',
                 'after'      => 'tripay_merchant_code',
             ],
@@ -38,6 +39,7 @@ class TRIPAYAddTripayAndGatewayPreference extends Migration
 
     public function down()
     {
+        // Pastikan kolom dihapus saat rollback
         $this->forge->dropColumn('users', ['tripay_api_key', 'tripay_private_key', 'tripay_merchant_code', 'gateway_active']);
     }
 }
