@@ -28,6 +28,14 @@ class TransactionModel extends Model
         'snap_token',
         'payment_gateway',
         'midtrans_key_source',
+        'tripay_reference', // Tripay field
+        'tripay_pay_url',   // Tripay field
+        'tripay_raw',       // Tripay field
+        'zeppelin_reference_id', // <-- Tambahkan Orderkuota/Zeppelin field
+        'zeppelin_paid_amount',  // <-- Tambahkan Orderkuota/Zeppelin field
+        'zeppelin_qr_url',       // <-- Tambahkan Orderkuota/Zeppelin field
+        'zeppelin_expiry_date',  // <-- Tambahkan Orderkuota/Zeppelin field
+        'zeppelin_raw_response', // <-- Tambahkan Orderkuota/Zeppelin field
     ];
 
     // Dates
@@ -35,22 +43,7 @@ class TransactionModel extends Model
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
 
-    // Validation (Tambahkan jika perlu)
-    // protected $validationRules      = [];
-    // protected $validationMessages   = [];
-    // protected $skipValidation       = false;
-    // protected $cleanValidationRules = true;
-
-    // Callbacks
-    // protected $allowCallbacks = true;
-    // protected $beforeInsert   = [];
-    // protected $afterInsert    = [];
-    // protected $beforeUpdate   = [];
-    // protected $afterUpdate    = [];
-    // protected $beforeFind     = [];
-    // protected $afterFind      = [];
-    // protected $beforeDelete   = [];
-    // protected $afterDelete    = [];
+    // ... (rest of the model remains the same) ...
 
     public function getTransactionByOrderId($orderId)
     {
@@ -98,7 +91,8 @@ class TransactionModel extends Model
      */
     public function getTransactionWithUser(string $orderId): ?object
     {
-        return $this->select('transactions.id, transactions.user_id, transactions.midtrans_key_source, users.midtrans_server_key as user_server_key, transactions.status, transactions.transaction_type, transactions.product_id, transactions.variant_id, transactions.variant_name, transactions.quantity, transactions.amount, transactions.buyer_email, transactions.buyer_name') // Pilih kolom yang relevan saja
+        // Tambahkan kolom baru ke select jika diperlukan oleh logic webhook nanti
+        return $this->select('transactions.id, transactions.user_id, transactions.midtrans_key_source, users.midtrans_server_key as user_server_key, transactions.status, transactions.transaction_type, transactions.product_id, transactions.variant_id, transactions.variant_name, transactions.quantity, transactions.amount, transactions.buyer_email, transactions.buyer_name, transactions.payment_gateway') // Pilih kolom yang relevan saja
                     ->join('users', 'users.id = transactions.user_id', 'left')
                     ->where('transactions.order_id', $orderId)
                     ->first();

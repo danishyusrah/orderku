@@ -81,7 +81,16 @@ class Filters extends BaseFilters
         'before' => [
             // 'honeypot',
              // Aktifkan CSRF kecuali untuk webhook dan endpoint pembayaran AJAX
-             'csrf' => ['except' => ['payment/notify', 'payment/pay', 'payment/pay-product']],
+             'csrf' => [
+                 'except' => [
+                     'payment/notify',               // Midtrans Webhook
+                     'payment/tripay/notify',        // Tripay Webhook
+                     'payment/orderkuota/notify',    // Orderkuota/Zeppelin Webhook
+                     'payment/pay',                  // AJAX Upgrade Premium
+                     'payment/pay-product',          // AJAX Beli Produk
+                     'payment/orderkuota/check_status' // AJAX Cek Status Orderkuota
+                 ]
+             ],
             // 'invalidchars',
         ],
         'after' => [

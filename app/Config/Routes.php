@@ -50,7 +50,7 @@ $routes->group('dashboard', ['filter' => 'auth'], static function ($routes) {
     $routes->post('product/(:num)/variant/(:num)/items/delete/(:num)', 'DashboardController::deleteVariantStockItem/$1/$2/$3', ['as' => 'product.variant.stock.delete']);
 
     // Rute Update Stok Varian (via AJAX dari halaman daftar varian - jika masih dipakai)
-    $routes->post('product/(:num)/variant/stock/update', 'DashboardController::updateVariantStock/$1', ['as' => 'product.variant.stock.update']);
+    // $routes->post('product/(:num)/variant/stock/update', 'DashboardController::updateVariantStock/$1', ['as' => 'product.variant.stock.update']); // Komentari jika tidak dipakai
 
 
     // --- Lainnya ---
@@ -61,6 +61,8 @@ $routes->group('dashboard', ['filter' => 'auth'], static function ($routes) {
     $routes->post('settings/profile', 'DashboardController::updateProfile', ['as' => 'dashboard.profile.update']);
     $routes->post('settings/bank', 'DashboardController::updateBank', ['as' => 'dashboard.bank.update']);
     $routes->post('settings/midtrans', 'DashboardController::updateMidtransKeys', ['as' => 'dashboard.midtrans.update']);
+    $routes->post('settings/tripay', 'DashboardController::updateTripayKeys', ['as' => 'dashboard.tripay.update']); // Tripay Keys
+    $routes->post('settings/gateway', 'DashboardController::updateGatewayPreference', ['as' => 'dashboard.gateway.update']); // Gateway Preference
     $routes->post('settings/password', 'DashboardController::updatePassword', ['as' => 'dashboard.password.update']);
 
     $routes->get('withdraw', 'DashboardController::withdrawPage', ['as' => 'dashboard.withdraw']);
@@ -69,22 +71,20 @@ $routes->group('dashboard', ['filter' => 'auth'], static function ($routes) {
     $routes->get('transactions', 'DashboardController::transactions', ['as' => 'dashboard.transactions']);
 });
 
-// --- Dashboard (seller) settings baru ---
-$routes->post('settings/tripay', 'DashboardController::updateTripayKeys', ['as' => 'dashboard.tripay.update']);
-$routes->post('settings/gateway', 'DashboardController::updateGatewayPreference', ['as' => 'dashboard.gateway.update']);
 
-// --- Payment / Tripay ---
+// Payment API Routes (Webhook & AJAX Call)
 $routes->group('payment', static function ($routes) {
-    // yang lama (Midtrans)
-    $routes->post('notify', 'PaymentController::notificationHandler');
+    // --- AJAX Calls ---
+    $routes->post('pay', 'PaymentController::payForPremium', ['filter' => 'auth']); // AJAX Bayar Premium
+    $routes->post('pay-product', 'PaymentController::payForProduct'); // AJAX Bayar Produk
+    $routes->post('orderkuota/check_status', 'PaymentController::checkOrderkuotaStatus'); // AJAX Cek Status Orderkuota
 
-    // Tripay webhook (baru)
-    $routes->post('tripay/notify', 'PaymentController::tripayNotification');
-
-    // tetap: payForPremium & payForProduct
-    $routes->post('pay', 'PaymentController::payForPremium', ['filter' => 'auth']);
-    $routes->post('pay-product', 'PaymentController::payForProduct');
+    // --- Webhooks ---
+    $routes->post('notify', 'PaymentController::notificationHandler'); // Midtrans Webhook
+    $routes->post('tripay/notify', 'PaymentController::tripayNotification'); // Tripay Webhook
+    $routes->post('orderkuota/notify', 'PaymentController::zeppelinNotification'); // Orderkuota/Zeppelin Webhook
 });
+
 
 // Admin Panel Routes (Admin Only)
 $routes->group('admin', ['filter' => 'admin'], static function ($routes) {
@@ -100,22 +100,16 @@ $routes->group('admin', ['filter' => 'admin'], static function ($routes) {
 });
 
 
-// Payment API Routes (Webhook & AJAX Call)
-$routes->group('payment', static function ($routes) {
-    $routes->post('notify', 'PaymentController::notificationHandler'); // Webhook Midtrans
-    $routes->post('pay', 'PaymentController::payForPremium', ['filter' => 'auth']); // AJAX Bayar Premium
-    $routes->post('pay-product', 'PaymentController::payForProduct'); // AJAX Bayar Produk (bisa guest/auth tergantung kebutuhan)
-});
-
-
-// Public Profile Route (Wildcard)
+// Public Profile Route (Wildcard) - Letakkan di bagian bawah setelah route spesifik
 $routes->get('(:segment)', 'ProfileController::index/$1', [
     'as' => 'profile.public',
-    // Pastikan constraint ini tidak menghalangi rute lain
+    // Pastikan constraint ini tidak menghalangi rute lain yang sudah didefinisikan di atas
     'constraints' => [
-        'segment' => '^(?!admin|dashboard|payment|login|daftar|logout|assets|uploads|lupa-password|reset-password|public|vendor|writable)[^/]+$'
+        // Regex ini mengecualikan segmen pertama yang sama dengan nama grup atau route spesifik di atas
+        'segment' => '^(?!admin|dashboard|payment|login|daftar|logout|lupa-password|reset-password|assets|uploads|writable|vendor)[^/]+$'
     ]
 ]);
 
 // Pastikan rute CodeIgniter default (jika diperlukan) ada di paling bawah atau dihapus jika tidak dipakai
 // $routes->get('ci-default', 'Home::index');
+

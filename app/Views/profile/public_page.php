@@ -53,17 +53,20 @@
             justify-content: center;
             padding: 1rem;
         }
-        #checkoutModal.hidden, #tosModal.hidden, #manualDetailModal.hidden, #variantSelectionModal.hidden { display: none; }
+        /* Update modal hidden states */
+        #checkoutModal.hidden, #tosModal.hidden, #manualDetailModal.hidden, #variantSelectionModal.hidden, #qrisModal.hidden { display: none; }
         .modal-enter { opacity: 0; transform: scale(0.95); }
         .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 300ms, transform 300ms; }
         .modal-leave-active { opacity: 0; transform: scale(0.95); transition: opacity 300ms, transform 300ms; }
-        #tosModalContent::-webkit-scrollbar, #manualDetailModalContent::-webkit-scrollbar, #variantSelectionModalContent::-webkit-scrollbar { width: 6px; }
-        #tosModalContent::-webkit-scrollbar-track, #manualDetailModalContent::-webkit-scrollbar-track, #variantSelectionModalContent::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 3px;} /* Light mode track */
-        .dark #tosModalContent::-webkit-scrollbar-track, .dark #manualDetailModalContent::-webkit-scrollbar-track, .dark #variantSelectionModalContent::-webkit-scrollbar-track { background: #374151; } /* Dark mode track */
-        #tosModalContent::-webkit-scrollbar-thumb, #manualDetailModalContent::-webkit-scrollbar-thumb, #variantSelectionModalContent::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 3px;} /* Light mode thumb */
-        .dark #tosModalContent::-webkit-scrollbar-thumb, .dark #manualDetailModalContent::-webkit-scrollbar-thumb, .dark #variantSelectionModalContent::-webkit-scrollbar-thumb { background: #6b7280; } /* Dark mode thumb */
-        #tosModalContent::-webkit-scrollbar-thumb:hover, #manualDetailModalContent::-webkit-scrollbar-thumb:hover, #variantSelectionModalContent::-webkit-scrollbar-thumb:hover { background: #6b7280; } /* Light mode hover */
-        .dark #tosModalContent::-webkit-scrollbar-thumb:hover, .dark #manualDetailModalContent::-webkit-scrollbar-thumb:hover, .dark #variantSelectionModalContent::-webkit-scrollbar-thumb:hover { background: #9ca3af; } /* Dark mode hover */
+        /* Update scrollbar selectors */
+        #tosModalContent::-webkit-scrollbar, #manualDetailModalContent::-webkit-scrollbar, #variantSelectionModalContent::-webkit-scrollbar, #qrisModalContent::-webkit-scrollbar { width: 6px; }
+        #tosModalContent::-webkit-scrollbar-track, #manualDetailModalContent::-webkit-scrollbar-track, #variantSelectionModalContent::-webkit-scrollbar-track, #qrisModalContent::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 3px;} /* Light mode track */
+        .dark #tosModalContent::-webkit-scrollbar-track, .dark #manualDetailModalContent::-webkit-scrollbar-track, .dark #variantSelectionModalContent::-webkit-scrollbar-track, .dark #qrisModalContent::-webkit-scrollbar-track { background: #374151; } /* Dark mode track */
+        #tosModalContent::-webkit-scrollbar-thumb, #manualDetailModalContent::-webkit-scrollbar-thumb, #variantSelectionModalContent::-webkit-scrollbar-thumb, #qrisModalContent::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 3px;} /* Light mode thumb */
+        .dark #tosModalContent::-webkit-scrollbar-thumb, .dark #manualDetailModalContent::-webkit-scrollbar-thumb, .dark #variantSelectionModalContent::-webkit-scrollbar-thumb, .dark #qrisModalContent::-webkit-scrollbar-thumb { background: #6b7280; } /* Dark mode thumb */
+        #tosModalContent::-webkit-scrollbar-thumb:hover, #manualDetailModalContent::-webkit-scrollbar-thumb:hover, #variantSelectionModalContent::-webkit-scrollbar-thumb:hover, #qrisModalContent::-webkit-scrollbar-thumb:hover { background: #6b7280; } /* Light mode hover */
+        .dark #tosModalContent::-webkit-scrollbar-thumb:hover, .dark #manualDetailModalContent::-webkit-scrollbar-thumb:hover, .dark #variantSelectionModalContent::-webkit-scrollbar-thumb:hover, .dark #qrisModalContent::-webkit-scrollbar-thumb:hover { background: #9ca3af; } /* Dark mode hover */
+
         .fade-out { animation: fadeOut 0.5s forwards; animation-delay: 5s; }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; display: none; } }
         .spinner {
@@ -134,6 +137,25 @@
             cursor: not-allowed;
             opacity: 0.6;
             background-image: none !important; /* Remove gradient on disabled */
+        }
+
+        /* QRIS Modal specific */
+        #qrisImage {
+             max-width: 100%;
+             height: auto;
+             max-height: 300px; /* Limit QR height */
+             display: block;
+             margin: 1rem auto;
+             border: 1px solid #e5e7eb; /* Light border */
+             border-radius: 8px;
+        }
+        .dark #qrisImage {
+             border-color: #4b5563; /* Dark border */
+        }
+        .countdown-timer {
+            font-size: 0.8rem;
+            color: #ef4444; /* Red color for timer */
+            font-weight: 500;
         }
 
     </style>
@@ -513,6 +535,42 @@
         </div>
     </div>
 
+    <!-- NEW: Modal QRIS Orderkuota -->
+    <div id="qrisModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-center justify-center p-4 modal-enter" role="dialog" aria-modal="true" aria-labelledby="qrisModalTitle">
+        <div class="w-full max-w-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-50">
+            <div class="flex justify-between items-center p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
+                <h3 id="qrisModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Scan QRIS untuk Pembayaran</h3>
+                <button onclick="closeQrisModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white" aria-label="Tutup">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="qrisModalContent" class="p-4 sm:p-6 text-center max-h-[70vh] overflow-y-auto">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Silakan scan kode QRIS di bawah ini menggunakan aplikasi e-wallet atau mobile banking Anda.</p>
+                <!---->
+                <img id="qrisImage" src="" alt="Kode QRIS Pembayaran" class="mb-3">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Total Pembayaran:</p>
+                <p id="qrisAmount" class="text-xl font-bold text-indigo-600 dark:text-indigo-400 mb-3">Rp 0</p>
+                <p class="text-xs text-gray-500 dark:text-gray-500">Pastikan jumlah pembayaran sesuai.</p>
+                <div class="mt-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-500">Batas Waktu Pembayaran:</p>
+                    <p id="qrisExpiry" class="countdown-timer">--:--</p>
+                </div>
+                 <div id="qrisError" class="hidden mt-4 p-3 bg-red-100 dark:bg-red-500/20 border border-red-300 dark:border-red-500/50 text-red-700 dark:text-red-300 rounded-lg text-sm">
+                    Gagal memuat QRIS. Coba lagi nanti.
+                </div>
+                 <div class="mt-5 text-center">
+                     <button onclick="checkOrderStatusManual()" id="checkQrisStatusBtn" class="px-4 py-2 text-xs rounded-lg bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+                        <i class="fa-solid fa-sync fa-spin mr-1 hidden" id="checkQrisSpinner"></i>
+                        <span id="checkQrisBtnText">Cek Status Pembayaran</span>
+                    </button>
+                 </div>
+            </div>
+             <input type="hidden" id="qrisOrderId" value="">
+             <input type="hidden" id="qrisReferenceId" value="">
+             <input type="hidden" id="qrisExpiryTimestamp" value="">
+        </div>
+    </div>
+
     <!-- Modal TOS (Sama seperti sebelumnya) -->
     <div id="tosModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-center justify-center p-4 modal-enter" role="dialog" aria-modal="true" aria-labelledby="tosModalTitle">
          <div class="w-full max-w-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-50 flex flex-col max-h-[80vh]">
@@ -624,12 +682,26 @@
         const variantQuantityError = document.getElementById('variantQuantityError');
 
         const tosModalEl = document.getElementById('tosModal');
+        const qrisModalEl = document.getElementById('qrisModal'); // <-- NEW
+        const qrisImageEl = document.getElementById('qrisImage'); // <-- NEW
+        const qrisAmountEl = document.getElementById('qrisAmount'); // <-- NEW
+        const qrisExpiryEl = document.getElementById('qrisExpiry'); // <-- NEW
+        const qrisErrorEl = document.getElementById('qrisError');   // <-- NEW
+        const qrisOrderIdInput = document.getElementById('qrisOrderId'); // <-- NEW
+        const qrisReferenceIdInput = document.getElementById('qrisReferenceId'); // <-- NEW
+        const qrisExpiryTimestampInput = document.getElementById('qrisExpiryTimestamp'); // <-- NEW
+        const checkQrisStatusBtn = document.getElementById('checkQrisStatusBtn'); // <-- NEW
+        const checkQrisSpinner = document.getElementById('checkQrisSpinner'); // <-- NEW
+        const checkQrisBtnText = document.getElementById('checkQrisBtnText'); // <-- NEW
+
+
         const successToast = document.getElementById('payment-success-toast');
         const attemptToast = document.getElementById('payment-attempt-toast');
         const errorToast = document.getElementById('error-toast');
         const errorToastMessage = document.getElementById('error-toast-message');
 
         let currentProductData = {}; // Store current product data
+        let countdownInterval = null; // Variable for countdown timer
 
         // --- Product Click Handler ---
         function handleProductClick(button) {
@@ -910,17 +982,25 @@
             };
 
             try {
-                // Send data to backend to get Snap token
+                // Send data to backend to get Payment Info
                 const response = await fetch('<?= site_url('payment/pay-product') ?>', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
-                        // CSRF handled by wrapper
+                        'X-CSRF-TOKEN': csrfToken // Kirim CSRF Token
                     },
                     body: JSON.stringify(payload)
                 });
                 const result = await response.json();
+
+                 // Update CSRF token if backend sends a new one (optional but good practice)
+                if (result.csrf_hash) {
+                    csrfToken = result.csrf_hash;
+                    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                    if (csrfMeta) csrfMeta.setAttribute('content', csrfToken);
+                }
+
 
                 if (!response.ok) {
                     // Check if it's a stock error from the backend
@@ -938,7 +1018,8 @@
                 }
 
 
-                if (result.token) {
+                 // --- HANDLE DIFFERENT GATEWAY RESPONSES ---
+                if (result.token) { // Midtrans Snap Token
                     closeCheckoutModal();
                     snap.pay(result.token, {
                         onSuccess: (result) => {
@@ -959,8 +1040,18 @@
                              setLoading(false); // Reset loading state on close
                         }
                     });
-                } else {
-                     throw new Error('Token pembayaran tidak diterima dari server.');
+                } else if (result.gateway === 'tripay' && result.checkoutUrl) { // Tripay Checkout URL
+                    closeCheckoutModal();
+                    // Redirect or open in new tab (Tripay recommends redirect)
+                    window.location.href = result.checkoutUrl;
+                    // Note: If Tripay also returns QR, you might need similar logic as Orderkuota
+                } else if (result.gateway === 'orderkuota' && result.qrUrl) { // NEW: Orderkuota QRIS
+                    closeCheckoutModal();
+                    openQrisModal(result.qrUrl, result.paidAmount, result.expiry, result.orderId, result.reference);
+                }
+                // --- END HANDLE GATEWAY RESPONSES ---
+                else {
+                     throw new Error('Respons pembayaran tidak dikenal atau tidak valid dari server.');
                 }
             } catch (error) {
                 console.error('Checkout Error:', error);
@@ -987,6 +1078,186 @@
             tosModalEl.classList.add('modal-enter-active');
         }
 
+        // --- QRIS Modal Functions (NEW) ---
+        function openQrisModal(qrUrl, amount, expiryString, orderId, referenceId) {
+            if (!qrUrl) {
+                qrisImageEl.style.display = 'none';
+                qrisErrorEl.classList.remove('hidden');
+                qrisAmountEl.textContent = 'Rp -';
+                qrisExpiryEl.textContent = 'Error';
+            } else {
+                qrisImageEl.src = qrUrl;
+                qrisImageEl.style.display = 'block';
+                qrisErrorEl.classList.add('hidden');
+                qrisAmountEl.textContent = `Rp ${parseInt(amount).toLocaleString('id-ID')}`;
+                qrisOrderIdInput.value = orderId;
+                qrisReferenceIdInput.value = referenceId;
+
+                // Set expiry and start countdown
+                if (expiryString) {
+                    try {
+                        // Coba parse expiryString (asumsi format YYYY-MM-DD HH:MM:SS dari server)
+                        // Perlu penyesuaian jika formatnya beda
+                        // Penting: Menggunakan waktu server (+7 WIB) relatif terhadap waktu lokal browser
+                        const serverTimeWIB = new Date(expiryString.replace(' ', 'T') + '+07:00');
+                        const expiryTimestamp = serverTimeWIB.getTime(); // Get timestamp in milliseconds (UTC based)
+
+                        // Debug: Tampilkan waktu server dan lokal
+                        console.log("Server Expiry (WIB):", expiryString);
+                        console.log("Parsed Expiry Date Obj:", serverTimeWIB);
+                        console.log("Expiry Timestamp (UTC ms):", expiryTimestamp);
+                        console.log("Current Browser Time (ms):", new Date().getTime());
+
+
+                        qrisExpiryTimestampInput.value = expiryTimestamp;
+                        startCountdown(expiryTimestamp);
+                    } catch (e) {
+                         console.error("Error parsing expiry date:", e);
+                         qrisExpiryEl.textContent = "Error";
+                         qrisExpiryTimestampInput.value = "";
+                    }
+                } else {
+                    qrisExpiryEl.textContent = "Tidak ada batas waktu";
+                    qrisExpiryTimestampInput.value = "";
+                }
+            }
+
+            // Reset check status button state
+            checkQrisStatusBtn.disabled = false;
+            checkQrisSpinner.classList.add('hidden');
+            checkQrisBtnText.textContent = 'Cek Status Pembayaran';
+
+            qrisModalEl.classList.remove('hidden', 'modal-leave-active');
+            qrisModalEl.classList.add('modal-enter-active');
+        }
+
+
+        function closeQrisModal() {
+            closeModal(qrisModalEl);
+            if (countdownInterval) {
+                clearInterval(countdownInterval); // Stop timer
+                countdownInterval = null;
+            }
+        }
+        qrisModalEl.addEventListener('click', (e) => { if (e.target === qrisModalEl) closeQrisModal(); });
+
+        // --- Countdown Timer Function (NEW) ---
+        function startCountdown(expiryTimestamp) {
+            if (countdownInterval) clearInterval(countdownInterval); // Clear existing timer
+
+            if (!expiryTimestamp) {
+                qrisExpiryEl.textContent = "N/A";
+                return;
+            }
+
+            countdownInterval = setInterval(() => {
+                const now = new Date().getTime(); // Waktu browser saat ini (UTC ms)
+                const distance = expiryTimestamp - now;
+
+                if (distance < 0) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    qrisExpiryEl.textContent = "Kedaluwarsa";
+                    // Optionally disable check status button or show message
+                    checkQrisStatusBtn.disabled = true;
+                    checkQrisBtnText.textContent = 'Transaksi Kedaluwarsa';
+                    return;
+                }
+
+                // Kalkulasi waktu
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                // Format tampilan (MM:SS)
+                qrisExpiryEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // --- Manual Check QRIS Status (NEW - Placeholder Endpoint) ---
+        async function checkOrderStatusManual() {
+            const orderId = qrisOrderIdInput.value;
+            const referenceId = qrisReferenceIdInput.value;
+            const expiryTimestamp = qrisExpiryTimestampInput.value;
+
+            if (!referenceId || !orderId) {
+                showErrorToast("Tidak ada ID transaksi untuk diperiksa.");
+                return;
+            }
+
+            // Cek jika sudah expired dari timer
+            const now = new Date().getTime();
+            if (expiryTimestamp && now > parseInt(expiryTimestamp, 10)) {
+                 showErrorToast("Transaksi sudah kedaluwarsa.");
+                 checkQrisStatusBtn.disabled = true;
+                 checkQrisBtnText.textContent = 'Transaksi Kedaluwarsa';
+                 if (countdownInterval) clearInterval(countdownInterval);
+                 qrisExpiryEl.textContent = "Kedaluwarsa";
+                 return;
+            }
+
+
+            checkQrisStatusBtn.disabled = true;
+            checkQrisSpinner.classList.remove('hidden');
+            checkQrisBtnText.textContent = 'Memeriksa...';
+
+            try {
+                // --- Panggil endpoint backend untuk cek status ---
+                // Pastikan endpoint ini aman dan hanya bisa diakses oleh user yang berhak
+                // Endpoint ini akan memanggil ZeppelinClient::checkStatus di backend
+                const response = await fetch('<?= site_url('payment/orderkuota/check_status') ?>', { // Ganti dengan URL endpoint Anda
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken // Kirim CSRF Token
+                    },
+                    body: JSON.stringify({ referenceId: referenceId }) // Kirim referenceId ke backend
+                });
+
+                 // Update CSRF token jika backend mengirim yang baru
+                const newCsrf = response.headers.get('X-CSRF-TOKEN');
+                if (newCsrf) {
+                     csrfToken = newCsrf;
+                     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                     if (csrfMeta) csrfMeta.setAttribute('content', csrfToken);
+                }
+
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || `Gagal memeriksa status (${response.status})`);
+                }
+
+                const status = result.status ? result.status.toLowerCase() : 'unknown';
+
+                if (status === 'success' || status === 'paid') {
+                    closeQrisModal();
+                    window.location.href = '<?= current_url() ?>?payment=success'; // Redirect ke halaman sukses
+                } else if (status === 'failed' || status === 'expired') {
+                     closeQrisModal();
+                     showErrorToast(`Pembayaran ${status === 'expired' ? 'kedaluwarsa' : 'gagal'}. Silakan coba lagi.`);
+                     if (countdownInterval) clearInterval(countdownInterval);
+                     qrisExpiryEl.textContent = status === 'expired' ? "Kedaluwarsa" : "Gagal";
+                     checkQrisBtnText.textContent = status === 'expired' ? 'Transaksi Kedaluwarsa' : 'Pembayaran Gagal';
+
+                } else { // Masih pending atau status lain
+                     showErrorToast("Pembayaran masih menunggu atau belum selesai. Silakan coba cek lagi nanti.");
+                     checkQrisStatusBtn.disabled = false; // Enable tombol lagi
+                     checkQrisSpinner.classList.add('hidden');
+                     checkQrisBtnText.textContent = 'Cek Status Pembayaran';
+                }
+
+            } catch (error) {
+                console.error("Error checking status:", error);
+                showErrorToast(error.message || "Gagal memeriksa status. Coba lagi.");
+                checkQrisStatusBtn.disabled = false; // Enable tombol lagi
+                checkQrisSpinner.classList.add('hidden');
+                checkQrisBtnText.textContent = 'Cek Status Pembayaran';
+            }
+        }
+
+
         // --- Close Modal Functions ---
         function closeModal(modalEl) {
             modalEl.classList.add('modal-leave-active');
@@ -1001,6 +1272,8 @@
         manualDetailModalEl.addEventListener('click', (e) => { if (e.target === manualDetailModalEl) closeManualDetailModal(); });
         variantSelectionModalEl.addEventListener('click', (e) => { if (e.target === variantSelectionModalEl) closeVariantSelectionModal(); });
         tosModalEl.addEventListener('click', (e) => { if (e.target === tosModalEl) closeTosModal(); });
+        qrisModalEl.addEventListener('click', (e) => { if (e.target === qrisModalEl) closeQrisModal(); });
+
 
         // --- UI Helper Functions ---
         function setLoading(isLoading) {
@@ -1055,44 +1328,62 @@
 
 
          // --- CSRF Setup for Fetch ---
-         const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
-         let csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : null;
+         // Dapatkan token CSRF awal dari meta tag
+         let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
          if (!csrfToken) console.warn('CSRF meta tag not found.');
 
-         const originalFetch = fetch;
-         fetch = (...args) => {
-             if (args[1] && args[1].method && args[1].method.toUpperCase() !== 'GET' && csrfToken) {
-                 if (!args[1].headers) args[1].headers = {};
-                  // Ensure headers is a plain object or Headers instance
-                 if (!(args[1].headers instanceof Headers) && typeof args[1].headers !== 'object') {
-                      args[1].headers = {};
+         // Override fungsi fetch global untuk menambahkan header CSRF dan token di body (jika perlu)
+         const originalFetch = window.fetch;
+         window.fetch = async (url, options) => {
+             // Hanya tambahkan header jika bukan request GET dan token tersedia
+             if (options && options.method && options.method.toUpperCase() !== 'GET' && csrfToken) {
+                 // Pastikan headers adalah objek
+                 if (!options.headers) {
+                     options.headers = {};
                  }
-                 // Add CSRF token
-                 if (args[1].headers instanceof Headers) {
-                     args[1].headers.set('X-CSRF-TOKEN', csrfToken);
-                 } else {
-                     args[1].headers['X-CSRF-TOKEN'] = csrfToken;
-                 }
-                 // Add token to body if it's form data or JSON
-                 if (args[1].body) {
-                     if (args[1].body instanceof URLSearchParams || args[1].body instanceof FormData) {
-                        // CI4's CSRF filter expects it in the body, typically named csrf_test_name (default)
-                        args[1].body.append('<?= csrf_token() ?>', csrfToken);
-                     } else if (typeof args[1].body === 'string' && args[1].headers['Content-Type'] === 'application/json') {
-                         try {
-                             let jsonData = JSON.parse(args[1].body);
-                             jsonData['<?= csrf_token() ?>'] = csrfToken;
-                             args[1].body = JSON.stringify(jsonData);
-                         } catch (e) {
-                             console.warn("Could not add CSRF token to JSON body:", e);
-                         }
-                     }
-                 }
+                 // Tambahkan header X-CSRF-TOKEN
+                 options.headers['X-CSRF-TOKEN'] = csrfToken;
              }
-             return originalFetch(...args);
+
+             // Lakukan fetch asli
+             const response = await originalFetch(url, options);
+
+             // Cek jika server mengirim header X-CSRF-TOKEN baru (CI4 biasanya tidak default)
+             // Jika Anda mengkonfigurasi CI4 untuk mengirim token baru di header, uncomment ini
+             /*
+             const newCsrfToken = response.headers.get('X-CSRF-TOKEN');
+             if (newCsrfToken) {
+                 csrfToken = newCsrfToken;
+                 const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                 if (csrfMeta) csrfMeta.setAttribute('content', csrfToken);
+                 console.log('New CSRF token received from header:', csrfToken);
+             }
+             */
+
+             // Cek jika server mengirim token baru dalam body JSON (cara umum CI4 dengan AJAX)
+             // Clone response untuk membaca body tanpa mengganggu response asli
+            if (response.headers.get('content-type')?.includes('application/json')) {
+                try {
+                    const clonedResponse = response.clone();
+                    const bodyJson = await clonedResponse.json();
+                    if (bodyJson && bodyJson.csrf_hash) { // Sesuaikan 'csrf_hash' jika nama field berbeda
+                         csrfToken = bodyJson.csrf_hash;
+                         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                         if (csrfMeta) csrfMeta.setAttribute('content', csrfToken);
+                         console.log('New CSRF token received from JSON body:', csrfToken);
+                    }
+                } catch (e) {
+                     // Abaikan jika body bukan JSON valid atau tidak ada token
+                    // console.warn('Could not parse JSON body for CSRF token:', e);
+                }
+            }
+
+
+             return response; // Kembalikan response asli
          };
 
     </script>
 
 </body>
 </html>
+

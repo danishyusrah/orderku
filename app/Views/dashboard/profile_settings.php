@@ -230,7 +230,7 @@
                class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
       </div>
       <div class="text-right">
-        <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500">Simpan Tripay</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold shadow-lg transition duration-300 text-sm">Simpan Tripay</button>
       </div>
     </div>
   <?= form_close() ?>
@@ -249,29 +249,36 @@
 
     <div class="bg-gray-900/80 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden p-6 sm:p-8">
     <h2 class="text-xl font-semibold text-white mb-6 border-b border-gray-700/50 pb-4">Preferensi Gateway Pembayaran</h2>
+    <p class="text-sm text-gray-400 -mt-4 mb-4">Pilih gateway mana yang ingin Anda prioritaskan untuk transaksi otomatis.</p>
+
 
     <?= form_open(route_to('dashboard.gateway.update')) ?>
         <?= csrf_field() ?>
         <div class="space-y-4">
-        <div class="flex items-center gap-4">
-            <label class="text-sm text-gray-300 w-48">Gateway Aktif</label>
-            <div class="flex flex-wrap gap-4">
-            <label class="inline-flex items-center gap-2 text-gray-300">
-                <input type="radio" name="gateway_active" value="system" <?= ($user->gateway_active ?? 'system')==='system'?'checked':'' ?> >
-                <span>Ikuti Default Sistem</span>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <label class="text-sm font-medium text-gray-300 w-full sm:w-auto mb-2 sm:mb-0">Gateway Aktif:</label>
+            <div class="flex flex-wrap gap-x-6 gap-y-2">
+            <label class="inline-flex items-center gap-2 text-gray-300 cursor-pointer">
+                <input type="radio" name="gateway_active" value="system" <?= ($user->gateway_active ?? 'system') === 'system' ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
+                <span>Default Sistem</span>
             </label>
-            <label class="inline-flex items-center gap-2 text-gray-300">
-                <input type="radio" name="gateway_active" value="midtrans" <?= ($user->gateway_active ?? '')==='midtrans'?'checked':'' ?> >
+            <label class="inline-flex items-center gap-2 text-gray-300 cursor-pointer">
+                <input type="radio" name="gateway_active" value="midtrans" <?= ($user->gateway_active ?? '') === 'midtrans' ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
                 <span>Midtrans</span>
             </label>
-            <label class="inline-flex items-center gap-2 text-gray-300">
-                <input type="radio" name="gateway_active" value="tripay" <?= ($user->gateway_active ?? '')==='tripay'?'checked':'' ?> >
+            <label class="inline-flex items-center gap-2 text-gray-300 cursor-pointer">
+                <input type="radio" name="gateway_active" value="tripay" <?= ($user->gateway_active ?? '') === 'tripay' ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
                 <span>Tripay</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-gray-300 cursor-pointer">
+                 <input type="radio" name="gateway_active" value="orderkuota" <?= ($user->gateway_active ?? '') === 'orderkuota' ? 'checked' : '' ?> class="form-radio text-indigo-500 bg-gray-700 border-gray-600 focus:ring-indigo-500">
+                 <span>Orderkuota</span>
             </label>
             </div>
         </div>
-        <div class="text-right">
-            <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500">Simpan Preferensi</button>
+        <p class="text-xs text-gray-500 mt-1">Jika memilih gateway spesifik, pastikan API Key sudah terisi (jika diperlukan oleh gateway tersebut). Jika memilih "Default Sistem" atau API Key kosong, sistem akan menggunakan gateway default yang diatur di <code class="text-xs bg-gray-700 px-1 rounded">.env</code>.</p>
+        <div class="flex justify-end mt-6 pt-6 border-t border-gray-700/50">
+            <button type="submit" class="px-6 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold shadow-lg transition duration-300 text-sm">Simpan Preferensi</button>
         </div>
         </div>
     <?= form_close() ?>
@@ -359,3 +366,4 @@
     }
 </script>
 <?= $this->endSection() ?>
+
