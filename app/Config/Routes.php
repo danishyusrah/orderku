@@ -49,10 +49,6 @@ $routes->group('dashboard', ['filter' => 'auth'], static function ($routes) {
     // Rute BARU untuk MENGHAPUS item stok dari varian
     $routes->post('product/(:num)/variant/(:num)/items/delete/(:num)', 'DashboardController::deleteVariantStockItem/$1/$2/$3', ['as' => 'product.variant.stock.delete']);
 
-    // Rute Update Stok Varian (via AJAX dari halaman daftar varian - jika masih dipakai)
-    // $routes->post('product/(:num)/variant/stock/update', 'DashboardController::updateVariantStock/$1', ['as' => 'product.variant.stock.update']); // Komentari jika tidak dipakai
-
-
     // --- Lainnya ---
     $routes->get('upgrade', 'DashboardController::upgradePage', ['as' => 'dashboard.upgrade']);
 
@@ -62,6 +58,7 @@ $routes->group('dashboard', ['filter' => 'auth'], static function ($routes) {
     $routes->post('settings/bank', 'DashboardController::updateBank', ['as' => 'dashboard.bank.update']);
     $routes->post('settings/midtrans', 'DashboardController::updateMidtransKeys', ['as' => 'dashboard.midtrans.update']);
     $routes->post('settings/tripay', 'DashboardController::updateTripayKeys', ['as' => 'dashboard.tripay.update']); // Tripay Keys
+    $routes->post('settings/orderkuota', 'DashboardController::updateOrderkuotaKeys', ['as' => 'dashboard.orderkuota.update']); // Orderkuota Keys
     $routes->post('settings/gateway', 'DashboardController::updateGatewayPreference', ['as' => 'dashboard.gateway.update']); // Gateway Preference
     $routes->post('settings/password', 'DashboardController::updatePassword', ['as' => 'dashboard.password.update']);
 

@@ -38,6 +38,10 @@ class UserModel extends Model
         'tripay_merchant_code',
         'gateway_active',
         // 'midtrans_is_production',
+        // --- ADDED ORDERKUOTA FIELDS ---
+        'zeppelin_auth_username', // Tambahkan ini
+        'zeppelin_auth_token',    // Tambahkan ini
+        // --- END ADDED FIELDS ---
         'created_at',
         'updated_at',
         'reset_token_hash',
@@ -93,14 +97,15 @@ class UserModel extends Model
 
         $this->db->transStart();
         $this->where('id', $userId)
-             ->where('balance >=', $amount)
+             ->where('balance >=', $amount) // Pastikan saldo cukup sebelum mengurangi
              ->set('balance', 'balance - ' . $this->db->escape($amount), false)
              ->update();
 
-        $affectedRows = $this->db->affectedRows();
+        $affectedRows = $this->db->affectedRows(); // Cek apakah baris terupdate
 
         $this->db->transComplete();
 
+        // Cek status transaksi DAN apakah baris terupdate (menangani race condition)
         if ($this->db->transStatus() === false || $affectedRows === 0) {
             log_message('error', "[Balance Update] Transaction failed or balance condition not met for user ID {$userId}. Amount: {$amount}. Affected Rows: {$affectedRows}. Error: " . print_r($this->db->error(), true));
             return false;
@@ -110,3 +115,4 @@ class UserModel extends Model
         return true;
     }
 }
+

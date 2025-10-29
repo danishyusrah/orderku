@@ -21,7 +21,7 @@
                     $logoUrl = $user->logo_filename
                         ? base_url('uploads/logos/' . $user->logo_filename)
                         // Fallback to UI Avatars using username as default
-                        : 'https://ui-avatars.com/api/?name=' . urlencode($user->username) . '&background=4f46e5&color=ffffff&size=64&bold=true';
+                        : 'https://ui-avatars.com/api/?name=' . urlencode($user->store_name ?: $user->username) . '&background=4f46e5&color=ffffff&size=64&bold=true';
                     ?>
                     <img src="<?= esc($logoUrl, 'attr') ?>"
                          alt="Logo Toko"
@@ -246,6 +246,51 @@
   <?php endif; ?>
 </div>
 
+<!-- === FORM ORDERKUOTA BARU === -->
+<div class="bg-gray-900/80 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden p-6 sm:p-8">
+  <h2 class="text-xl font-semibold text-white mb-6 border-b border-gray-700/50 pb-4">Pengaturan Kredensial Orderkuota (Zeppelin) (Opsional)</h2>
+  <p class="text-sm text-gray-400 -mt-4 mb-4">Kosongkan jika ingin menggunakan kredensial default sistem.</p>
+
+  <?= form_open(route_to('dashboard.orderkuota.update')) // Gunakan route baru ?>
+    <?= csrf_field() ?>
+    <div class="space-y-4">
+      <div>
+        <label for="zeppelin_auth_username" class="block text-sm font-medium text-gray-300 mb-2">Username Orderkuota</label>
+        <input type="text" name="zeppelin_auth_username" id="zeppelin_auth_username"
+               value="<?= old('zeppelin_auth_username', $user->zeppelin_auth_username ?? '') ?>"
+               class="w-full px-3 py-2 bg-gray-800 border <?= session('errorsOrderkuota.zeppelin_auth_username') ? 'border-red-500' : 'border-gray-700' ?> rounded-lg text-white"
+               placeholder="Username Akun Orderkuota Anda">
+        <p class="text-xs text-gray-500 mt-1">Biarkan kosong untuk menggunakan default sistem.</p>
+        <?php if (session('errorsOrderkuota.zeppelin_auth_username')): ?>
+            <p class="text-xs text-red-400 mt-1"><?= session('errorsOrderkuota.zeppelin_auth_username') ?></p>
+        <?php endif ?>
+      </div>
+      <div>
+        <label for="zeppelin_auth_token" class="block text-sm font-medium text-gray-300 mb-2">Auth Token Zeppelin</label>
+        <input type="password" name="zeppelin_auth_token" id="zeppelin_auth_token"
+               value="<?= old('zeppelin_auth_token', $user->zeppelin_auth_token ?? '') ?>"
+               class="w-full px-3 py-2 bg-gray-800 border <?= session('errorsOrderkuota.zeppelin_auth_token') ? 'border-red-500' : 'border-gray-700' ?> rounded-lg text-white"
+               placeholder="Token dari Zeppelin API">
+        <p class="text-xs text-gray-500 mt-1">Biarkan kosong untuk menggunakan default sistem.</p>
+        <?php if (session('errorsOrderkuota.zeppelin_auth_token')): ?>
+            <p class="text-xs text-red-400 mt-1"><?= session('errorsOrderkuota.zeppelin_auth_token') ?></p>
+        <?php endif ?>
+      </div>
+      <div class="text-right">
+        <button type="submit" class="px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold shadow-lg transition duration-300 text-sm">Simpan Orderkuota</button>
+      </div>
+    </div>
+  <?= form_close() ?>
+
+  <!-- Pesan Sukses/Error Orderkuota -->
+  <?php if (session('successOrderkuota')): ?>
+    <p class="text-xs text-green-400 mt-2 text-right"><?= session('successOrderkuota') ?></p>
+  <?php elseif (session('errorOrderkuota')): ?>
+    <p class="text-xs text-red-400 mt-2 text-right"><?= session('errorOrderkuota') ?></p>
+  <?php endif; ?>
+</div>
+<!-- === AKHIR FORM ORDERKUOTA BARU === -->
+
 
     <div class="bg-gray-900/80 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden p-6 sm:p-8">
     <h2 class="text-xl font-semibold text-white mb-6 border-b border-gray-700/50 pb-4">Preferensi Gateway Pembayaran</h2>
@@ -367,4 +412,3 @@
     }
 </script>
 <?= $this->endSection() ?>
-

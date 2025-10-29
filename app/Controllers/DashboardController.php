@@ -13,6 +13,7 @@ use App\Models\WithdrawalRequestModel;
 use Config\Services;
 use CodeIgniter\I18n\Time;
 use CodeIgniter\API\ResponseTrait; // Diperlukan untuk response AJAX
+use Config\Orderkuota as OrderkuotaConfig; // Added
 
 class DashboardController extends BaseController
 {
@@ -25,6 +26,7 @@ class DashboardController extends BaseController
     protected ProductVariantModel $productVariantModel;
     protected TransactionModel $transactionModel;
     protected WithdrawalRequestModel $withdrawalRequestModel;
+    protected OrderkuotaConfig $defaultOrderkuotaConfig; // Added
     protected int $currentUserId; // ID user yang sedang login
     protected $helpers = ['form', 'url', 'filesystem', 'number', 'text']; // Helper yang digunakan
 
@@ -37,11 +39,15 @@ class DashboardController extends BaseController
         $this->productVariantModel = new ProductVariantModel();
         $this->transactionModel = new TransactionModel();
         $this->withdrawalRequestModel = new WithdrawalRequestModel();
+        $this->defaultOrderkuotaConfig = new OrderkuotaConfig(); // Added
 
         // Ambil user ID dari session
         $this->currentUserId = session()->get('user_id');
         if (!$this->currentUserId) {
              log_message('error', 'User ID not found in session for DashboardController.');
+             // Pertimbangkan redirect ke login jika user ID tidak ada
+             // service('response')->redirect(route_to('login'))->send();
+             // exit;
         }
     }
 
@@ -944,6 +950,7 @@ class DashboardController extends BaseController
              'actionBank' => route_to('dashboard.bank.update'),
              'actionMidtrans' => route_to('dashboard.midtrans.update'),
              'actionTripay' => route_to('dashboard.tripay.update'), // Tambahkan action Tripay
+             'actionOrderkuota' => route_to('dashboard.orderkuota.update'), // <<< TAMBAHKAN INI
              'actionGateway' => route_to('dashboard.gateway.update'), // Tambahkan action Gateway Preference
              'actionPassword' => route_to('dashboard.password.update'),
          ];
@@ -1137,6 +1144,43 @@ class DashboardController extends BaseController
         log_message('error', 'Tripay keys update failed for User ID: '.$this->currentUserId);
         return redirect()->route('dashboard.settings')->with('errorTripay', 'Gagal menyimpan API Key Tripay.');
     }
+
+    // --- TAMBAHKAN METHOD BARU INI ---
+    /**
+     * Memproses update kredensial Orderkuota (Zeppelin)
+     */
+    public function updateOrderkuotaKeys()
+    {
+        // Aturan validasi
+        $rules = [
+            'zeppelin_auth_username' => 'permit_empty|string|max_length[255]',
+            'zeppelin_auth_token'    => 'permit_empty|string|max_length[255]',
+        ];
+
+        // Jalankan validasi
+        if (!$this->validate($rules)) {
+            session()->setFlashdata('errorsOrderkuota', $this->validator->getErrors()); // Specific flashdata key
+            return redirect()->back()->withInput();
+        }
+
+        // Siapkan data, set null jika kosong
+        $data = [
+            'zeppelin_auth_username' => trim($this->request->getPost('zeppelin_auth_username') ?? '') ?: null,
+            'zeppelin_auth_token'    => trim($this->request->getPost('zeppelin_auth_token') ?? '') ?: null,
+        ];
+
+        // Lakukan update
+        if ($this->userModel->update($this->currentUserId, $data)) {
+            log_message('info', 'Orderkuota keys updated for User ID: '.$this->currentUserId);
+            return redirect()->route('dashboard.settings')->with('successOrderkuota', 'Kredensial Orderkuota (Zeppelin) berhasil diperbarui.'); // Specific success message
+        }
+
+        log_message('error', 'Orderkuota keys update failed for User ID: '.$this->currentUserId);
+        session()->setFlashdata('errorOrderkuota', 'Gagal menyimpan kredensial Orderkuota.'); // Specific error message
+        return redirect()->back()->withInput();
+    }
+    // --- AKHIR METHOD BARU ---
+
 
     // Memproses update preferensi gateway pembayaran
     public function updateGatewayPreference()

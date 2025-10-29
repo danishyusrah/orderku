@@ -3,8 +3,6 @@
 namespace App\Libraries;
 
 use Config\Orderkuota as OrderkuotaConfig;
-// Hapus atau comment use CodeIgniter\HTTP\ClientInterface; jika tidak dipakai di tempat lain
-// use CodeIgniter\HTTP\ClientInterface;
 use CodeIgniter\HTTP\Exceptions\HTTPException;
 use CodeIgniter\HTTP\ResponseInterface; // Import ResponseInterface
 use Throwable; // Import Throwable
@@ -16,9 +14,7 @@ use Throwable; // Import Throwable
  */
 class ZeppelinClient
 {
-    // Hapus atau comment type hint ClientInterface
-    // protected ClientInterface $httpClient;
-    protected $httpClient; // Hapus type hint
+    protected $httpClient; // HTTP Client instance without base_uri
     protected OrderkuotaConfig $config;
     protected array $authPayload;
 
@@ -26,15 +22,18 @@ class ZeppelinClient
      * Constructor.
      *
      * @param OrderkuotaConfig|null $config Configuration object.
-     * @param \CodeIgniter\HTTP\ClientInterface|null  $client HTTP Client instance. // Biarkan type hint di parameter constructor
+     * @param \CodeIgniter\HTTP\ClientInterface|null  $client HTTP Client instance.
      */
-    public function __construct(?OrderkuotaConfig $config = null, /* Biarkan type hint di parameter */ ?\CodeIgniter\HTTP\ClientInterface $client = null)
+    public function __construct(?OrderkuotaConfig $config = null, ?\CodeIgniter\HTTP\ClientInterface $client = null)
     {
-        $this->config     = $config ?? config('Orderkuota'); // Ensure config is loaded
-        // Line 31: Assign the client service result directly without strict property type check
+        $this->config = $config ?? config('Orderkuota'); // Ensure config is loaded
+
+        log_message('debug', '[ZeppelinClient Constructor] Using API URL: "' . ($this->config->apiUrl ?? 'NULL') . '"');
+
+        // Initialize HTTP client without base_uri
         $this->httpClient = $client ?? \Config\Services::curlrequest([
-            'base_uri' => $this->config->apiUrl,
-            'timeout'  => 15, // Set default timeout
+            // 'base_uri' is removed here
+            'timeout'     => 15, // Set default timeout
             'http_errors' => false, // Handle errors manually based on status code
         ]);
 
@@ -47,7 +46,6 @@ class ZeppelinClient
         // Validasi konfigurasi dasar
         if (empty($this->config->apiUrl) || empty($this->config->authUsername) || empty($this->config->authToken)) {
             log_message('critical', '[ZeppelinClient] Konfigurasi API (URL, Username, Token) tidak lengkap.');
-            // Anda bisa melempar exception di sini jika diperlukan
             // throw new \RuntimeException('Konfigurasi ZeppelinClient tidak lengkap.');
         }
     }
@@ -64,20 +62,20 @@ class ZeppelinClient
     public function createPayment(string $referenceId, int $amount): array
     {
         $endpoint = '/api/v1/payments/create';
-        // Menggunakan expiryTime dari config
+        $fullUrl = rtrim($this->config->apiUrl, '/') . $endpoint; // Create full URL
         $params   = [
             'reference_id' => $referenceId,
             'amount'       => $amount,
-            'expiry'       => $this->config->expiryTime, // Gunakan expiryTime dari config
+            'expiry'       => $this->config->expiryTime,
         ];
 
-        log_message('debug', '[ZeppelinClient] Creating payment. Ref ID: ' . $referenceId . ', Amount: ' . $amount . ', Expiry: ' . $this->config->expiryTime . ' mins');
+        log_message('debug', '[ZeppelinClient] Creating payment. URL: ' . $fullUrl . ' Ref ID: ' . $referenceId . ', Amount: ' . $amount . ', Expiry: ' . $this->config->expiryTime . ' mins');
 
-        // Kirim request POST dengan auth payload di body dan parameter di query string
         try {
-            $response = $this->httpClient->post($endpoint, [
-                'query' => $params, // Kirim parameter sebagai query string
-                'json'  => $this->authPayload, // Kirim auth payload sebagai JSON body
+            // Use full URL in the post request
+            $response = $this->httpClient->post($fullUrl, [
+                'query' => $params,
+                'json'  => $this->authPayload,
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
@@ -86,14 +84,12 @@ class ZeppelinClient
 
             return $this->handleResponse($response, 'createPayment', $referenceId);
         } catch (Throwable $e) {
-            log_message('error', '[ZeppelinClient Exception - createPayment] Ref ID: ' . $referenceId . ' Error: ' . $e->getMessage());
-            // Berikan pesan error yang lebih spesifik jika mungkin
+            log_message('error', '[ZeppelinClient Exception - createPayment] Ref ID: ' . $referenceId . ' Error Type: '. get_class($e) . ' Code: ' . $e->getCode() . ' Message: ' . $e->getMessage());
             $errorMessage = 'Gagal membuat pembayaran via Zeppelin API.';
             if (ENVIRONMENT !== 'production') {
-                $errorMessage .= ' Detail: ' . $e->getMessage();
+                $errorMessage .= ' Detail: ' . $e->getCode() . ' : ' . $e->getMessage();
             }
-             // Throw exception agar bisa ditangkap di controller
-            throw new \RuntimeException($errorMessage);
+            throw new \RuntimeException($errorMessage, $e->getCode(), $e);
         }
     }
 
@@ -108,13 +104,14 @@ class ZeppelinClient
     public function checkStatus(string $referenceId): array
     {
         $endpoint = '/api/v1/payments/' . $referenceId . '/status';
+        $fullUrl = rtrim($this->config->apiUrl, '/') . $endpoint; // Create full URL
 
-        log_message('debug', '[ZeppelinClient] Checking status for Ref ID: ' . $referenceId);
+        log_message('debug', '[ZeppelinClient] Checking status. URL: ' . $fullUrl . ' Ref ID: ' . $referenceId);
 
         try {
-            // Sesuai zeppelin.js, ini juga POST dengan auth payload di body
-            $response = $this->httpClient->post($endpoint, [
-                'json' => $this->authPayload, // Kirim auth payload sebagai JSON body
+            // Use full URL in the post request
+            $response = $this->httpClient->post($fullUrl, [
+                'json' => $this->authPayload,
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
@@ -123,13 +120,12 @@ class ZeppelinClient
 
             return $this->handleResponse($response, 'checkStatus', $referenceId);
         } catch (Throwable $e) {
-            log_message('error', '[ZeppelinClient Exception - checkStatus] Ref ID: ' . $referenceId . ' Error: ' . $e->getMessage());
-             // Berikan pesan error yang lebih spesifik
+            log_message('error', '[ZeppelinClient Exception - checkStatus] Ref ID: ' . $referenceId . ' Error Type: '. get_class($e) . ' Code: ' . $e->getCode() . ' Message: ' . $e->getMessage());
             $errorMessage = 'Gagal memeriksa status pembayaran via Zeppelin API.';
              if (ENVIRONMENT !== 'production') {
-                $errorMessage .= ' Detail: ' . $e->getMessage();
+                $errorMessage .= ' Detail: ' . $e->getCode() . ' : ' . $e->getMessage();
             }
-            throw new \RuntimeException($errorMessage);
+            throw new \RuntimeException($errorMessage, $e->getCode(), $e);
         }
     }
 
@@ -144,13 +140,14 @@ class ZeppelinClient
     public function cancelPayment(string $referenceId): array
     {
         $endpoint = '/api/v1/payments/' . $referenceId . '/cancel';
+        $fullUrl = rtrim($this->config->apiUrl, '/') . $endpoint; // Create full URL
 
-        log_message('debug', '[ZeppelinClient] Cancelling payment for Ref ID: ' . $referenceId);
+        log_message('debug', '[ZeppelinClient] Cancelling payment. URL: ' . $fullUrl . ' Ref ID: ' . $referenceId);
 
         try {
-            // Sesuai zeppelin.js, ini juga POST dengan auth payload di body
-            $response = $this->httpClient->post($endpoint, [
-                'json' => $this->authPayload, // Kirim auth payload sebagai JSON body
+            // Use full URL in the post request
+            $response = $this->httpClient->post($fullUrl, [
+                'json' => $this->authPayload,
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
@@ -159,13 +156,12 @@ class ZeppelinClient
 
             return $this->handleResponse($response, 'cancelPayment', $referenceId);
         } catch (Throwable $e) {
-            log_message('error', '[ZeppelinClient Exception - cancelPayment] Ref ID: ' . $referenceId . ' Error: ' . $e->getMessage());
-             // Berikan pesan error yang lebih spesifik
+            log_message('error', '[ZeppelinClient Exception - cancelPayment] Ref ID: ' . $referenceId . ' Error Type: '. get_class($e) . ' Code: ' . $e->getCode() . ' Message: ' . $e->getMessage());
             $errorMessage = 'Gagal membatalkan pembayaran via Zeppelin API.';
             if (ENVIRONMENT !== 'production') {
-                $errorMessage .= ' Detail: ' . $e->getMessage();
+                $errorMessage .= ' Detail: ' . $e->getCode() . ' : ' . $e->getMessage();
             }
-            throw new \RuntimeException($errorMessage);
+            throw new \RuntimeException($errorMessage, $e->getCode(), $e);
         }
     }
 
@@ -198,7 +194,6 @@ class ZeppelinClient
                  $errorMessage .= ' - ' . $response->getReasonPhrase();
             }
             log_message('error', "[ZeppelinClient HTTP Error - {$methodName}] Ref ID: {$referenceId} | {$errorMessage}");
-            // Throw exception for HTTP errors, use message from body if available
             $exceptionMessage = (is_array($decoded) && !empty($decoded['message'])) ? $decoded['message'] : 'Terjadi kesalahan saat menghubungi API pembayaran.';
             if(ENVIRONMENT !== 'production') $exceptionMessage .= " (HTTP {$statusCode})";
             throw new \RuntimeException($exceptionMessage, $statusCode);
@@ -210,36 +205,28 @@ class ZeppelinClient
             throw new \RuntimeException('Gagal memproses response dari API (JSON tidak valid).', $statusCode);
         }
 
-        // Periksa struktur response dasar dari API Zeppelin (berdasarkan zeppelin.js)
+        // Periksa struktur response dasar
         if (!isset($decoded['success'])) {
              log_message('error', "[ZeppelinClient Structure Error - {$methodName}] Ref ID: {$referenceId} | Field 'success' tidak ditemukan dalam response: {$body}");
              throw new \RuntimeException("Format response API tidak dikenali (missing 'success' field).", $statusCode);
         }
 
-        // Kembalikan response apa adanya, controller akan cek 'success' flag
         return $decoded;
     }
 
     /**
-     * Helper untuk menghasilkan reference ID unik (opsional, bisa diganti dengan logic di controller).
-     * Mengadaptasi logika dari utils.js.
-     * PENTING: SHA1 tidak seaman hash modern, pertimbangkan algoritma lain jika keamanan tinggi diperlukan.
-     * Fungsi ini mungkin tidak menghasilkan ID yang sama persis dengan versi Node.js karena perbedaan implementasi crypto.
+     * Helper untuk menghasilkan reference ID unik (opsional).
      *
-     * @param string|int $seed Seed untuk ID (misal: user ID).
+     * @param string|int $seed Seed untuk ID.
      * @return string Reference ID yang dihasilkan.
      */
     public static function generateReferenceID($seed): string
     {
-        // Implementasi ini mencoba meniru Node.js tapi mungkin tidak identik
         $hashPart = substr(preg_replace('/\D/', '', sha1((string)$seed)), 0, 6) ?: substr(str_shuffle("0123456789"), 0, 6);
-        $timePart = substr((string)floor(microtime(true) * 1000), -6); // Timestamp milliseconds
+        $timePart = substr((string)floor(microtime(true) * 1000), -6);
         $randPart = mt_rand(100, 999);
-
-        // Menggabungkan bagian-bagian
         $combined = $hashPart . $timePart . $randPart;
-
-        // API Zeppelin sepertinya mengharapkan string numerik, jadi kita kembalikan $combined saja.
-        return $combined;
+        return (string)$combined;
     }
 }
+
