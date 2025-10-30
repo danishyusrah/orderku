@@ -6,8 +6,12 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 
-// Redirect root to login
-$routes->get('/', static fn() => redirect()->route('login'));
+// --- PERUBAHAN DI SINI ---
+// Arahkan root URL ke controller Home, method landing
+$routes->get('/', 'Home::landing', ['as' => 'landing']);
+// $routes->get('/', static fn() => redirect()->route('login')); // Baris ini diganti/dikomentari
+
+// --- AKHIR PERUBAHAN ---
 
 // Authentication Routes (Guest Only)
 $routes->group('', ['filter' => 'guest'], static function ($routes) {
@@ -109,4 +113,3 @@ $routes->get('(:segment)', 'ProfileController::index/$1', [
 
 // Pastikan rute CodeIgniter default (jika diperlukan) ada di paling bawah atau dihapus jika tidak dipakai
 // $routes->get('ci-default', 'Home::index');
-
