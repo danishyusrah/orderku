@@ -63,7 +63,7 @@
              <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
                   <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M7 19V5l10 14V5"></path></svg>
              </div>
-             <span class="text-lg font-bold text-white">Repo.ID</span>
+             <span class="text-lg font-bold text-white">Itsku ID</span>
          </div>
          <button id="menu-toggle-button" aria-label="Toggle Menu">
              <i class="fa-solid fa-bars text-xl text-gray-300"></i>
@@ -81,7 +81,7 @@
                 <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M7 19V5l10 14V5"></path></svg>
                 </div>
-                <span class="text-xl font-bold text-white">Repo.ID</span>
+                <span class="text-xl font-bold text-white">Itsku ID</span>
             </div>
              <!-- Close button for mobile -->
             <button id="close-sidebar-button" class="md:hidden absolute top-4 right-4 text-gray-400 hover:text-white">

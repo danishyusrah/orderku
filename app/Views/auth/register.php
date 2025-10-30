@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Akun Baru - Repo.ID</title>
+    <title>Daftar Akun Baru - Itsku ID</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,7 +26,7 @@
                 <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M7 19V5l10 14V5"></path></svg>
                 </div>
-                <span class="text-2xl font-bold text-white">Repo.ID</span>
+                <span class="text-2xl font-bold text-white">Itsku ID</span>
             </div>
             <h1 class="text-2xl font-bold text-center text-white mb-6">Buat Akun Baru</h1>
 
@@ -46,7 +46,7 @@
                 <div class="mb-4">
                     <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
                     <input type="text" name="username" id="username" class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" value="<?= old('username') ?>" required pattern="[a-zA-Z0-9_]+" title="Hanya huruf, angka, dan underscore (_)">
-                    <p class="text-xs text-gray-500 mt-1">Hanya huruf, angka, underscore (_). Ini jadi URL publik Anda (cth: repo.id/<?= old('username', 'UsernameAnda') ?>)</p>
+                    <p class="text-xs text-gray-500 mt-1">Hanya huruf, angka, underscore (_). Ini jadi URL publik Anda (cth: Itsku ID/<?= old('username', 'UsernameAnda') ?>)</p>
                 </div>
                 <div class="mb-4">
                     <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email</label>

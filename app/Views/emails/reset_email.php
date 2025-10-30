@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Reset Password Akun Repo.ID Anda</title>
+    <title>Reset Password Akun Itsku ID Anda</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f7; }
         .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -24,7 +24,7 @@
         </div>
         <div class="content">
             <p>Halo <?= esc($username) ?>,</p>
-            <p>Kami menerima permintaan untuk mereset password akun Repo.ID Anda yang terkait dengan email ini.</p>
+            <p>Kami menerima permintaan untuk mereset password akun Itsku ID Anda yang terkait dengan email ini.</p>
             <p>Jika Anda merasa tidak melakukan permintaan ini, abaikan saja email ini.</p>
             <p>Untuk melanjutkan proses reset password, silakan klik tombol di bawah ini:</p>
 
@@ -35,10 +35,10 @@
             <p>Jika tombol di atas tidak berfungsi, salin dan tempel URL berikut ke browser Anda:</p>
             <p><a href="<?= $resetLink ?>" class="link"><?= $resetLink ?></a></p>
 
-            <p>Terima kasih,<br>Tim Repo.ID</p>
+            <p>Terima kasih,<br>Tim Itsku ID</p>
         </div>
         <div class="footer">
-            <p>&copy; <?= date('Y') ?> Repo.ID. All rights reserved.</p>
+            <p>&copy; <?= date('Y') ?> Itsku ID. All rights reserved.</p>
         </div>
     </div>
 </body>

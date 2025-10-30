@@ -193,9 +193,9 @@ class AuthController extends BaseController
         $email->setTo($user->email);
          // Ambil konfigurasi email dari .env atau config
         $fromEmail = env('email.fromEmail') ?: config('Email')->fromEmail ?: 'no-reply@example.com';
-        $fromName = env('email.fromName') ?: config('Email')->fromName ?: 'Repo.ID';
+        $fromName = env('email.fromName') ?: config('Email')->fromName ?: 'Itsku.id';
         $email->setFrom($fromEmail, $fromName);
-        $email->setSubject('Reset Password Akun Repo.ID Anda');
+        $email->setSubject('Reset Password Akun Itsku.id Anda');
 
         $message = view('emails/reset_email', [
             'username'      => $user->username,
